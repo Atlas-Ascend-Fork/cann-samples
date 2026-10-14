@@ -33,6 +33,8 @@ fi
 rm -rf build
 rm -rf build_out
 rm -f build_out_*.zip
+rm -rf third_party/shmem/build
+rm -rf third_party/shmem/install
 
 # CMake 配置
 cmake -S . -B build -DNPU_ARCH="${NPU_ARCH}"
