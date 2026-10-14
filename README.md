@@ -253,7 +253,13 @@ python3 scripts/check_env.py
 │   │   ├── 03_simt_api                      # SIMT API 入门样例
 │   │   ├── 04_aicpu                         # AI CPU 算子入门样例
 │   │   ├── 05_simd_simt_hybrid              # SIMD/SIMT 混合编程入门样例
-│   │   └── 99_system                        # CANN组件样例
+│   │   ├── 99_system                        # CANN组件样例
+│   │   ├── matmul                           # Tensor API 矩阵乘入门样例
+│   │   ├── npu_execution                    # NPU 算子执行链路概念文档
+│   │   ├── vector_add                       # TQue / TPipe 向量加法入门样例
+│   │   ├── vector_add_c_api                 # C API 向量加法入门样例
+│   │   ├── vector_function_add              # RegBase VF 向量加法入门样例
+│   │   └── vector_function_getting_started  # RegBase VF 编程模型入门文档
 │   ├── 1_Features                           # 功能特性样例
 │   │   ├── memory_optimization              # 访存优化方法
 │   │   ├── instruction_optimization         # 指令优化方法
@@ -273,9 +279,12 @@ python3 scripts/check_env.py
 ├── cmake                                    # 工程编译配置
 ├── scripts                                   # 环境检查等辅助脚本
 │   └── check_env.py                          # 构建前环境自检脚本
+├── tests                                    # 测试目录
 ├── .clang-format                            # 代码格式配置
 ├── CMakeLists.txt                           # 根 CMake 配置
+├── CONTRIBUTING.md                          # 贡献指南
 ├── LICENSE                                  # 许可证
+├── requirements.txt                         # Python 依赖
 ├── SECURITY.md                              # 安全声明
 └── README.md                                # 项目说明文档
 ```

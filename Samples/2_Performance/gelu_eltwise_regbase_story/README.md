@@ -193,7 +193,7 @@ cmake --build build --target gelu_eltwise_regbase_4_scalar_tuning
 
 ## 参考文档
 
-- [Reg矢量计算编程](https://gitcode.com/Ascend/asc-devkit/blob/master/docs/guide/编程指南/编程模型/AI-Core-SIMD编程/基于指针的C语言编程/Reg矢量计算编程.md)
-- [VF融合优化](https://gitcode.com/Ascend/asc-devkit/blob/master/docs/guide/算子实践参考/SIMD算子性能优化/矢量计算/VF性能优化/VF融合优化.md)
-- [VF循环优化](https://gitcode.com/Ascend/asc-devkit/blob/master/docs/guide/算子实践参考/SIMD算子性能优化/矢量计算/VF性能优化/VF循环优化.md)
-- [指令双发优化](https://gitcode.com/Ascend/asc-devkit/blob/master/docs/guide/算子实践参考/SIMD算子性能优化/矢量计算/VF性能优化/指令双发优化.md)
+- [Reg矢量计算编程](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/guide/programming_guide/programming_model/ai_core_simd_programming/c_pointer_programming/reg_vector_computation.md)
+- [VF融合优化](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/guide/operator_practice/simd_operator_optimization/vector_compute/vf_optimization/vf_fusion_optimization.md)
+- [VF循环优化](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/guide/operator_practice/simd_operator_optimization/vector_compute/vf_optimization/vf_loop_optimization.md)
+- [指令双发优化](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/guide/operator_practice/simd_operator_optimization/vector_compute/vf_optimization/dual_issue_optimization.md)
