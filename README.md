@@ -72,71 +72,86 @@ npx skills add https://gitcode.com/cann/cann-samples.git --skill samples
 
 ## 📝环境部署
 
-当前仓库已验证通过的社区版 CANN Toolkit 如下：
+请依次完成 CANN Toolkit 安装、环境变量配置和基础依赖安装。涉及 Tensor API 的样例还需配置 asc-devkit 子模块，具体要求见[第 4 节](#4-配置-asc-devkit-子模块)。
+
+### 1. 安装社区版 CANN Toolkit
+
+根据使用场景选择 Weekly 版本或稳定版本，并在昇腾官网按产品系列、CPU 架构和操作系统下载对应的 CANN Toolkit 安装包，最后按页面提供的命令完成安装。
+
+- **场景1：基于 CANN Weekly 版本体验最新 master 能力或开发**
+
+  前往[CANN 快速安装](https://www.hiascend.com/cann/download?versionId=794&ids=d803%2Ch0501%2Ch0601%2Ch0703&currentTab=1)页面，选择“Weekly版本”。也可以从下方历史验证表中选择安装包。
+
+- **场景2：基于 CANN 稳定版本体验分支能力或开发**
+
+  前往[CANN 快速安装](https://www.hiascend.com/cann/download)页面，选择“稳定版本”。仅支持 **CANN 9.0.0 正式版及更新版本**。
+
+> **说明**：如果仅体验 cann-samples 样例，无需安装 CANN ops 包；已安装 ops 包也不影响样例的使用。
+
+#### 历史验证通过的 Weekly 版本
+
+下表记录了本仓库历史验证通过的社区版 CANN Toolkit Weekly 版本，按时间戳从新到旧排列，供安装时备选。请根据实际 CPU 架构选择下载链接；涉及 Tensor API 的样例请使用表中已验证通过的版本。
 
 | CANN 版本 | 时间戳 | 验证结果 | 下载链接 |
 | --- | --- | --- | --- |
+| `9.1.0` | `20260720000024864` | ✅ PASS | [aarch64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260720000024864/Ascend-cann-toolkit_9.1.0_linux-aarch64.run) / [x86_64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260720000024864/Ascend-cann-toolkit_9.1.0_linux-x86_64.run) |
 | `9.1.0` | `20260513000324948` | ✅ PASS | [aarch64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260513000324948/Ascend-cann-toolkit_9.1.0_linux-aarch64.run) / [x86_64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260513000324948/Ascend-cann-toolkit_9.1.0_linux-x86_64.run) |
 | `9.1.0` | `20260508171052185` | ✅ PASS | [aarch64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260508171052185/Ascend-cann-toolkit_9.1.0_linux-aarch64.run) / [x86_64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260508171052185/Ascend-cann-toolkit_9.1.0_linux-x86_64.run) |
 | `9.0.0` | `20260422000325096` | ✅ PASS | [aarch64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260422000325096/Ascend-cann-toolkit_9.0.0_linux-aarch64.run) / [x86_64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260422000325096/Ascend-cann-toolkit_9.0.0_linux-x86_64.run) |
-| `9.1.0` | `20260720000024864` | ✅ PASS | [aarch64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260720000024864/Ascend-cann-toolkit_9.1.0_linux-aarch64.run) / [x86_64](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/legacy/20260720000024864/Ascend-cann-toolkit_9.1.0_linux-x86_64.run) |
 
-请根据实际 CPU 架构，从上述链接目录中自行选择对应的 `.run` 安装包。
+### 2. 配置环境变量
 
-### 兼容性声明
+安装完成后，执行以下命令使 CANN Toolkit 环境变量生效：
 
-cann-samples中矩阵乘类example更新，引入asc-devkit子模块。涉及Tensor API的样例需使用上表中已验证通过的 Toolkit 版本构建，并按下文[asc-devkit子模块与Toolkit约束](#4-asc-devkit子模块与toolkit约束)初始化子模块、配置环境变量。
+```bash
+source ${install_path}/ascend-toolkit/set_env.sh
+```
 
-toolkit 安装包文件名格式如下：
+请将 `${install_path}` 替换为 Toolkit 的实际安装目录，例如 `/usr/local/Ascend` 或 `${HOME}/Ascend`。
 
-- `Ascend-cann-toolkit_${cann_version}_linux-aarch64.run`
-- `Ascend-cann-toolkit_${cann_version}_linux-x86_64.run`
+### 3. 安装基础依赖
 
-1. **安装社区版 CANN Toolkit**
+编译样例前，请确保已安装以下依赖并满足版本要求：
 
-    ```bash
-    # 确保安装包具有可执行权限
-    chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
-    # 安装命令
-    ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --force --install-path=${install_path}
-    ```
-    - `${cann_version}`：表示 toolkit 安装包版本号，需满足上文的最低版本要求。
-    - `${arch}`：表示 CPU 架构，如 `aarch64`、`x86_64`。
-    - `${install_path}`：表示指定安装路径，默认安装在 `/usr/local/Ascend` 目录。
+- CMake >= 3.16.0
+- Python >= 3.10.0
+- zip
+- git
 
-2. **配置环境变量**
+在仓库根目录执行以下命令，安装 Python 三方库依赖：
 
-   安装完成后，请先执行：
+```bash
+pip3 install -r requirements.txt
+```
 
-    ```bash
-    source ${install_path}/ascend-toolkit/set_env.sh
-    ```
+### 4. 配置 asc-devkit 子模块
 
-   请将 `${install_path}` 替换为 toolkit 的实际安装目录，例如 `/usr/local/Ascend` 或 `${HOME}/Ascend`。
+矩阵乘等涉及 Tensor API 的样例依赖 asc-devkit 子模块。该子模块位于 `third_party/asc-devkit`，对应上游仓库 [asc-devkit](https://gitcode.com/cann/asc-devkit)，当前固定在 `feature/tensor_api_from_9.0.0` 分支的 commit `04e3587dceb4792be9351e1057bf41772b5ffcd6`。Tensor API 的头文件和实现分别位于其 `include/tensor_api` 与 `impl/tensor_api` 目录。
 
-3. **前置依赖**
+#### 获取子模块
 
-   编译用到的依赖如下，请确保已安装并且满足版本要求：
+克隆本仓库时，建议一并获取子模块：
 
-   - cmake >= 3.16.0
-   - python >= 3.10.0
-   - zip
-   - git
-   - python三方库依赖：通过`pip3 install -r requirements.txt`安装
+```bash
+git clone --recurse-submodules <仓库 URL>
+```
 
-#### 4. asc-devkit子模块与Toolkit约束
+若已克隆仓库但未获取子模块，请在仓库根目录执行：
 
-   - **仓库与路径**：`third_party/asc-devkit`对应上游仓库[asc-devkit](https://gitcode.com/cann/asc-devkit)，当前固定在`feature/tensor_api_from_9.0.0`分支的commit `04e3587dceb4792be9351e1057bf41772b5ffcd6`。Tensor API位于其`include/tensor_api`与`impl/tensor_api`目录。
-   - **获取源码**：克隆本仓库时建议执行 `git clone --recurse-submodules <仓库 URL>`；若已克隆未带子模块，在仓库根目录执行：
-     ```bash
-     git submodule update --init third_party/asc-devkit
-     ```
-     若未提前初始化子模块，CMake在构建依赖`cann_samples::tensor_api`的目标时也会尝试执行上述子模块更新命令。
-     Tensor API 与 SHMEM 的自动子模块更新通过 Git common directory 中的共同锁串行执行，
-     避免并行构建竞争写入 Git 配置；后续 SHMEM 编译仍可并行。锁等待最多 600 秒，Git 失败会中止对应依赖目标。
-     不依赖 CANN/NPU 的 Host 集成验证命令与范围见 [cmake/tests/README.md](cmake/tests/README.md)。
-   - **Toolkit要求**：Tensor API相关样例会使用`third_party/asc-devkit`下的Tensor API头文件以及Toolkit中的Ascend C头文件，因此必须安装完整的CANN Toolkit并先执行`source ${install_path}/ascend-toolkit/set_env.sh`。当前请使用上表中已验证通过的版本构建；Toolkit版本过旧、仅安装Run包或环境变量未生效时，可能出现头文件缺失、符号未定义或编译选项报错。
-   - **NPU架构**：`matmul_story`、`grouped_matmul_story`额外要求`NPU_ARCH=dav-3510`（Ascend 950）；使用`dav-2201`全量配置工程时，这两项样例会被跳过，属预期行为。
+```bash
+git submodule update --init third_party/asc-devkit
+```
+
+#### Toolkit 与硬件要求
+
+- **Toolkit**：Tensor API 相关样例同时依赖 asc-devkit 的 Tensor API 头文件和 Toolkit 中的 Ascend C 头文件。请安装完整的 CANN Toolkit，使用上方历史验证表中已验证通过的版本，并按第 2 节配置环境变量。Toolkit 版本过旧、仅安装 Run 包或环境变量未生效时，可能出现头文件缺失、符号未定义或编译选项报错。
+- **NPU 架构**：`matmul_story`、`grouped_matmul_story` 额外要求 `NPU_ARCH=dav-3510`（Ascend 950）。使用 `dav-2201` 全量配置工程时，这两项样例会被跳过。
+
+#### 构建时的子模块处理
+
+若未提前初始化子模块，CMake 在构建依赖 `cann_samples::tensor_api` 的目标时，也会尝试执行上述子模块更新命令。
+
+Tensor API 与 SHMEM 的自动子模块更新通过 Git common directory 中的共同锁串行执行，避免并行构建竞争写入 Git 配置；后续 SHMEM 编译仍可并行。锁等待最多 600 秒，Git 失败会中止对应依赖目标。不依赖 CANN/NPU 的 Host 集成验证命令与范围见 [cmake/tests/README.md](cmake/tests/README.md)。
 
 ---
 
