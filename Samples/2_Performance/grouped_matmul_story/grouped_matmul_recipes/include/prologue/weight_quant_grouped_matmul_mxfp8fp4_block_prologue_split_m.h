@@ -369,9 +369,9 @@ __aicore__ inline void WQBMM_PROLOGUE_CLASS::CopyGmToUb(
     const GMWeightBaseTensorType& gmWeightBaseTensor, const Weight4BitTensorType& weight4BitTensor)
 {
     if (mte2RealK > 0) {
-        auto gmSliceTensor = gmWeightBaseTensor.Slice(AscendC::Te::MakeCoord(kOffset, param.nOffset), AscendC::Te::MakeShape(mte2RealK, param.nL1Size));
-        auto copyGM2UBWeight = AscendC::Te::MakeCopy(AscendC::Te::CopyGM2UBWeight{});
-        AscendC::Te::Copy(copyGM2UBWeight, weight4BitTensor, gmSliceTensor);
+        auto gmSliceTensor = gmWeightBaseTensor.slice(asc::te::make_coord(kOffset, param.nOffset), asc::te::make_shape(mte2RealK, param.nL1Size));
+        auto copyGM2UBWeight = asc::te::make_copy(asc::te::CopyGM2UBWeight{});
+        asc::te::copy(copyGM2UBWeight, weight4BitTensor, gmSliceTensor);
     }
 
     // Synchronization point after copy completes
@@ -401,8 +401,8 @@ __aicore__ inline void WQBMM_PROLOGUE_CLASS::CopyWeightToL1(
 {
     if (likely(mte2RealK > 0)) {
         // Copy weight 8-bit from UB to L1 (inlined from CopyWeight8BitForAligned)
-        auto copyUB2L1 = AscendC::Te::MakeCopy(AscendC::Te::CopyUB2L1Custom{});
-        AscendC::Te::Copy(copyUB2L1, l1Tensor, weight8BitTensor);
+        auto copyUB2L1 = asc::te::make_copy(asc::te::CopyUB2L1Custom{});
+        asc::te::copy(copyUB2L1, l1Tensor, weight8BitTensor);
     }
     SetFlag<HardEvent::MTE3_V>(vecEventIdMte3ToV_ + (ubComputeLoopIdx_ & (WEIGHT_8BIT_BUFFER_NUM - 1)));
     ubComputeLoopIdx_++;
@@ -425,27 +425,27 @@ __aicore__ inline void WQBMM_PROLOGUE_CLASS::FinalizeVectorCompute()
 WQBMM_PROLOGUE_TEMPLATE_PARAM
 __aicore__ inline auto WQBMM_PROLOGUE_CLASS::MakeWeight4BitTensor(uint64_t mte2RealK, uint64_t nL1Size)
 {
-    return AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, InType>(WEIGHT_4BIT_OFFSETS[ubMte2LoopIdx_ & (kUbMte2BufferNum - 1)]),
-        AscendC::Te::Weight4BitLayout<InType>{}(static_cast<int64_t>(mte2RealK), static_cast<int64_t>(nL1Size)));
+    return asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::ub, InType>(WEIGHT_4BIT_OFFSETS[ubMte2LoopIdx_ & (kUbMte2BufferNum - 1)]),
+        asc::te::Weight4BitLayout<InType>{}(static_cast<int64_t>(mte2RealK), static_cast<int64_t>(nL1Size)));
 }
 
 WQBMM_PROLOGUE_TEMPLATE_PARAM
 __aicore__ inline auto WQBMM_PROLOGUE_CLASS::MakeWeight8BitTensor(uint64_t mte2RealK, uint64_t nL1Size)
 {
-    return AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, OutType>(WEIGHT_8BIT_OFFSETS[ubComputeLoopIdx_ & (WEIGHT_8BIT_BUFFER_NUM - 1)]),
-        AscendC::Te::Weight8BitUBLayout<OutType, WEIGHT_8BIT_LAYOUT_INNER_SIZE>{}(mte2RealK, nL1Size));
+    return asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::ub, OutType>(WEIGHT_8BIT_OFFSETS[ubComputeLoopIdx_ & (WEIGHT_8BIT_BUFFER_NUM - 1)]),
+        asc::te::Weight8BitUBLayout<OutType, WEIGHT_8BIT_LAYOUT_INNER_SIZE>{}(mte2RealK, nL1Size));
 }
 
 WQBMM_PROLOGUE_TEMPLATE_PARAM
 __aicore__ inline auto WQBMM_PROLOGUE_CLASS::MakeL1WeightTensor(
     uint64_t mte2RealK, uint64_t nL1Size, uint64_t l1SplitOffset)
 {
-    auto l1BaseLayout = AscendC::Te::MakeFrameLayout<AscendC::Te::ZNLayoutPtn, AscendC::Te::LayoutTraitDefault<OutType>>(mte2RealK, nL1Size);
-    auto l1BaseTensor = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, OutType>(L1_WEIGHT_OFFSETS[cvLoopIdx_ & (DOUBLE_BUFFER - 1)]), l1BaseLayout);
-    return l1BaseTensor.Slice(AscendC::Te::MakeCoord(l1SplitOffset, 0), AscendC::Te::MakeShape(mte2RealK, nL1Size));
+    auto l1BaseLayout = asc::te::make_frame_layout<asc::te::zn_layout_ptn, asc::te::layout_trait_default<OutType>>(mte2RealK, nL1Size);
+    auto l1BaseTensor = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::l1, OutType>(L1_WEIGHT_OFFSETS[cvLoopIdx_ & (DOUBLE_BUFFER - 1)]), l1BaseLayout);
+    return l1BaseTensor.slice(asc::te::make_coord(l1SplitOffset, 0), asc::te::make_shape(mte2RealK, nL1Size));
 }
 
 #undef WQBMM_PROLOGUE_CLASS

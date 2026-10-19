@@ -11,8 +11,8 @@
 
 #include "include/tensor_api/tensor.h"
 
-namespace AscendC {
-namespace Te {
+namespace asc {
+namespace te {
 
 // Custom UB to L1 copy class for 8-bit weight
 // Both UB and L1 use NZ (fractal) format
@@ -20,13 +20,13 @@ struct CopyUB2L1Custom {
     template <typename Tp, const Tp& traits, typename T, typename U>
     __aicore__ inline static void Copy(const T& dst, const U& src)
     {
-        using type = typename U::elementType;
-        const auto& dstLayout = dst.Layout();
-        const auto& srcLayout = src.Layout();
+        using type = typename U::element_type;
+        const auto& dstLayout = dst.layout();
+        const auto& srcLayout = src.layout();
 
-        // Get shape and stride tuples
-        auto srcShape = AscendC::Te::GetShape(srcLayout);
-        auto srcStrideTuple = AscendC::Te::GetStride(srcLayout);
+        // get shape and stride tuples
+        auto srcShape = asc::te::get_shape(srcLayout);
+        auto srcStrideTuple = asc::te::get_stride(srcLayout);
 
         // Extract dimensions from srcShape = ((c0, k1), (n0, n1))
         // Std::get<0>(srcShape) = (c0, k1), Std::get<1>(srcShape) = (n0, n1)
@@ -52,17 +52,17 @@ struct CopyUB2L1Custom {
         int64_t dstStride = 0;
 
         asc_copy_ub2l1(
-            (__cbuf__ void*)dst.Data().Get(), (__ubuf__ void*)src.Data().Get(), blockCount, blockLen, srcStride, dstStride);
+            (__cbuf__ void*)dst.data().get(), (__ubuf__ void*)src.data().get(), blockCount, blockLen, srcStride, dstStride);
     }
 };
 
-} // namespace Te
-} // namespace AscendC
+} // namespace te
+} // namespace asc
 
-// Register CopyTraits with standard trait
+// Register copy_traits with standard trait
 template <>
-struct AscendC::Te::CopyTraits<AscendC::Te::CopyUB2L1Custom>
-    : public AscendC::Te::CopyTraits<
-          AscendC::Te::CopyUB2L1Custom, AscendC::Te::CopyUB2L1TraitDefault,
-          AscendC::Te::CopyUB2L1Custom, AscendC::Te::CopyUB2L1TraitDefault> {};
+struct asc::te::copy_traits<asc::te::CopyUB2L1Custom>
+    : public asc::te::copy_traits<
+          asc::te::CopyUB2L1Custom, asc::te::ub_to_l1_trait_default,
+          asc::te::CopyUB2L1Custom, asc::te::ub_to_l1_trait_default> {};
 

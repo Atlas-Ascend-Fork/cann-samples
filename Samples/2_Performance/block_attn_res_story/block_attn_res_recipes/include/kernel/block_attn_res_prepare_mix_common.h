@@ -56,12 +56,12 @@ struct TypedGmParams {
 template <typename T>
 __aicore__ inline auto MakeNDExtLayout(int64_t rows, int64_t columns, int64_t rowPitch)
 {
-    auto shape = AscendC::Te::MakeShape(
-        AscendC::Te::MakeShape(AscendC::Std::Int<1>{}, rows), AscendC::Te::MakeShape(AscendC::Std::Int<1>{}, columns));
-    auto stride = AscendC::Te::MakeStride(
-        AscendC::Te::MakeStride(AscendC::Std::Int<0>{}, rowPitch),
-        AscendC::Te::MakeStride(AscendC::Std::Int<0>{}, AscendC::Std::Int<1>{}));
-    return AscendC::Te::MakePatternLayout<AscendC::Te::NDExtLayoutPtn, AscendC::Te::LayoutTraitDefault<T>>(
+    auto shape = asc::te::make_shape(
+        asc::te::make_shape(AscendC::Std::Int<1>{}, rows), asc::te::make_shape(AscendC::Std::Int<1>{}, columns));
+    auto stride = asc::te::make_stride(
+        asc::te::make_stride(AscendC::Std::Int<0>{}, rowPitch),
+        asc::te::make_stride(AscendC::Std::Int<0>{}, AscendC::Std::Int<1>{}));
+    return asc::te::make_pattern_layout<asc::te::nd_ext_layout_ptn, asc::te::layout_trait_default<T>>(
         shape, stride);
 }
 
@@ -69,15 +69,15 @@ template <typename T>
 __aicore__ inline auto MakeBatchedDNExtLayout(
     int64_t batchCount, int64_t rows, int64_t columns, int64_t batchStride, int64_t columnStride)
 {
-    auto shape = AscendC::Te::MakeShape(
-        batchCount, AscendC::Te::MakeShape(
-                        AscendC::Te::MakeShape(AscendC::Std::Int<1>{}, rows),
-                        AscendC::Te::MakeShape(AscendC::Std::Int<1>{}, columns)));
-    auto stride = AscendC::Te::MakeStride(
-        batchStride, AscendC::Te::MakeStride(
-                         AscendC::Te::MakeStride(AscendC::Std::Int<0>{}, AscendC::Std::Int<1>{}),
-                         AscendC::Te::MakeStride(AscendC::Std::Int<0>{}, columnStride)));
-    return AscendC::Te::MakePatternLayout<AscendC::Te::DNExtLayoutPtn, AscendC::Te::LayoutTraitDefault<T>>(
+    auto shape = asc::te::make_shape(
+        batchCount, asc::te::make_shape(
+                        asc::te::make_shape(AscendC::Std::Int<1>{}, rows),
+                        asc::te::make_shape(AscendC::Std::Int<1>{}, columns)));
+    auto stride = asc::te::make_stride(
+        batchStride, asc::te::make_stride(
+                         asc::te::make_stride(AscendC::Std::Int<0>{}, AscendC::Std::Int<1>{}),
+                         asc::te::make_stride(AscendC::Std::Int<0>{}, columnStride)));
+    return asc::te::make_pattern_layout<asc::te::dn_ext_layout_ptn, asc::te::layout_trait_default<T>>(
         shape, stride);
 }
 
@@ -97,8 +97,8 @@ public:
     __aicore__ inline static void NotifyEReady(uint16_t eSlotIdx)
     {
         // Wait until the E workspace GM write has completed before publishing readiness to the consuming AIC.
-        AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(WORKSPACE_STORE_EVENT_ID);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(WORKSPACE_STORE_EVENT_ID);
+        asc_sync_notify(PIPE_MTE3, PIPE_S, static_cast<event_t>(WORKSPACE_STORE_EVENT_ID));
+        asc_sync_wait(PIPE_MTE3, PIPE_S, static_cast<event_t>(WORKSPACE_STORE_EVENT_ID));
         AscendC::CrossCoreSetFlag<SYNC_MODE, PIPE_S>(E_READY_FLAG + eSlotIdx);
     }
 

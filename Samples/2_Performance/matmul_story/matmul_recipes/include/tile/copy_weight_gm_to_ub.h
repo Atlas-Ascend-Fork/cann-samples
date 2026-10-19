@@ -22,13 +22,13 @@ struct CopyGM2UBPackedWeight {
     template <typename Tp, const Tp& traits, typename T, typename U>
     __aicore__ inline static void Copy(const T& dst, const U& src)
     {
-        const auto& dstLayout = dst.Layout();
-        const auto& srcLayout = src.Layout();
-        uint8_t cacheMode = src.Engine().GetCacheMode();
+        const auto& dstLayout = dst.layout();
+        const auto& srcLayout = src.layout();
+        uint8_t cacheMode = src.engine().get_cache_mode();
 
-        auto srcShape = AscendC::Te::GetShape(srcLayout);
-        auto srcStride = AscendC::Te::GetStride(srcLayout);
-        auto dstStride = AscendC::Te::GetStride(dstLayout);
+        auto srcShape = asc::te::get_shape(srcLayout);
+        auto srcStride = asc::te::get_stride(srcLayout);
+        auto dstStride = asc::te::get_stride(dstLayout);
 
         uint16_t blockCount = AscendC::Std::get<1>(AscendC::Std::get<0>(srcShape));
         uint32_t blockLen = AscendC::Std::get<1>(AscendC::Std::get<0>(dstStride)) >> 1;
@@ -36,7 +36,7 @@ struct CopyGM2UBPackedWeight {
         int64_t dstStrideBytes = AscendC::Std::get<1>(AscendC::Std::get<0>(dstStride)) >> 1;
 
         asc_copy_gm2ub_align(
-            (__ubuf__ uint8_t*)dst.Data().Get(), (__gm__ uint8_t*)src.Data().Get(), blockCount, blockLen, 0, 0, false,
+            (__ubuf__ uint8_t*)dst.data().get(), (__gm__ uint8_t*)src.data().get(), blockCount, blockLen, 0, 0, false,
             cacheMode, srcStrideBytes, dstStrideBytes);
     }
 };
@@ -44,7 +44,7 @@ struct CopyGM2UBPackedWeight {
 } // namespace Tile
 
 template <>
-struct AscendC::Te::CopyTraits<::Tile::CopyGM2UBPackedWeight>
-    : public AscendC::Te::CopyTraits<
-          ::Tile::CopyGM2UBPackedWeight, AscendC::Te::CopyGM2UBTraitDefault, ::Tile::CopyGM2UBPackedWeight,
-          AscendC::Te::CopyGM2UBTraitDefault> {};
+struct asc::te::copy_traits<::Tile::CopyGM2UBPackedWeight>
+    : public asc::te::copy_traits<
+          ::Tile::CopyGM2UBPackedWeight, asc::te::gm_to_ub_trait_default, ::Tile::CopyGM2UBPackedWeight,
+          asc::te::gm_to_ub_trait_default> {};

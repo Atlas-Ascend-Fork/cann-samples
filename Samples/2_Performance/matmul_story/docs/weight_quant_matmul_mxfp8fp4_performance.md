@@ -83,9 +83,9 @@ Vector核负责实现类型转换：`float4_e2m1` → `float8_e4m3fn`。Ascend95
 
 | **缓冲区变化** | **Src Layout** | **Dst Layout** | **CopyOperation** | **所属流水** |
 |-|-|-|-|-|
-| GM --> UB(in) | `Layout(Custom0): k1=ceil(k/_k0) n1=ceil(n/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | `Layout(Custom1): k1=ceil(k/_k0) n1=ceil(n/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | CopyGM2UB | MTE2|
+| GM --> UB(in) | `Layout(Custom0): k1=ceil(k/_k0) n1=ceil(n/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | `Layout(Custom1): k1=ceil(k/_k0) n1=ceil(n/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | copy_gm_to_ub | MTE2|
 | UB(in) --> VF Reg --> UB(out)| `Layout(Custom1): k1=ceil(k/_k0) n1=ceil(n/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | `VF Reg / UB(out) Layout(Custom2): n0Vec=8`<br>`k1Vec=ceil(kReg/_k0) n1Vec=ceil(nReg/n0Vec)`<br>`shape: ((_k0, k1Vec), (n0Vec, n1Vec))`<br>`stride: ((_1, _1024*n1Vec), (_k0, _1024))`| VF/Shift | VEC |
-| UB(out) --> L1| `Layout(Custom2): n0Vec=8`<br>`k1Vec=ceil(kReg/_k0) n1Vec=ceil(nReg/n0Vec)`<br>`shape: ((_k0, k1Vec), (n0Vec, n1Vec))`<br>`stride: ((_1, _1024*n1Vec), (_k0, _1024))` | `Layout(Custom3): k1L1=ceil(kL1/_k0) n1L1=ceil(nL1/_n0)`<br>`shape: ((_k0, k1L1), (_n0, n1L1))`<br>`stride: ((_1, _k0*_n0*nL1), (_k0, _k0*_n0))`| CopyUB2L1 | MTE3 |
+| UB(out) --> L1| `Layout(Custom2): n0Vec=8`<br>`k1Vec=ceil(kReg/_k0) n1Vec=ceil(nReg/n0Vec)`<br>`shape: ((_k0, k1Vec), (n0Vec, n1Vec))`<br>`stride: ((_1, _1024*n1Vec), (_k0, _1024))` | `Layout(Custom3): k1L1=ceil(kL1/_k0) n1L1=ceil(nL1/_n0)`<br>`shape: ((_k0, k1L1), (_n0, n1L1))`<br>`stride: ((_1, _k0*_n0*nL1), (_k0, _k0*_n0))`| copy_ub_to_l1 | MTE3 |
 
 注：`UB(in) --> VF Reg --> UB(out)`中的`n0Vec=8`会保留到UB(out)布局；`UB(out) --> L1`搬运时再转换为L1内存Layout中的`_n0=16`。`UB(out) --> L1`的源端和目的端`k1`含义不同。源端`k1Vec`表示单个Vector核本轮输出覆盖的K向块数；目的端`k1L1`表示L1中供Cube核消费的K向块数，由两个Vector核的输出在K向拼接形成。
 
@@ -117,8 +117,8 @@ Vector核负责实现类型转换：`float4_e2m1` → `float8_e4m3fn`。Ascend95
 
 | **缓冲区变化** | **Src Layout** | **Dst Layout** | **CopyOperation** | **所属流水** |
 |-|-|-|-|-|
-| GM --> L1 | `Layout(ND):`<br>`shape: (m, k)`<br>`stride: (k, _1)` | `Layout(NZ):`<br>`shape: ((_m0, mL1/_m0), (_k0, kL1/_k0))`<br>`stride: ((_k0, _m0*_k0), (_1, _k0*mL1))` | CopyGM2L1 | MTE2|
-| L1 --> L0A| `Layout(NZ):`<br>`shape: ((_m0, mL1/_m0), (_k0, kL1/_k0))`<br>`stride: ((_k0, _m0*_k0), (_1, _k0*mL1))` | `Layout(NZ):`<br>`shape: ((_m0, baseM/_m0), (_k0, baseK/_k0))`<br>`stride: ((_k0, _m0*_k0), (_1, _k0*mL1))`| CopyL12L0A | MTE1 |
+| GM --> L1 | `Layout(ND):`<br>`shape: (m, k)`<br>`stride: (k, _1)` | `Layout(NZ):`<br>`shape: ((_m0, mL1/_m0), (_k0, kL1/_k0))`<br>`stride: ((_k0, _m0*_k0), (_1, _k0*mL1))` | copy_gm_to_l1 | MTE2|
+| L1 --> L0A| `Layout(NZ):`<br>`shape: ((_m0, mL1/_m0), (_k0, kL1/_k0))`<br>`stride: ((_k0, _m0*_k0), (_1, _k0*mL1))` | `Layout(NZ):`<br>`shape: ((_m0, baseM/_m0), (_k0, baseK/_k0))`<br>`stride: ((_k0, _m0*_k0), (_1, _k0*mL1))`| copy_l1_to_l0a | MTE1 |
 
 <div align="center">
   <img src="images/mm_mxfp8fp4_a.png" width="100%" alt="Tensor A从GM到L1和L0A的搬运流程" />
@@ -128,8 +128,8 @@ Vector核负责实现类型转换：`float4_e2m1` → `float8_e4m3fn`。Ascend95
 
 | **缓冲区变化** | **Src Layout** | **Dst Layout** | **CopyOperation** | **所属流水** |
 |-|-|-|-|-|
-| GM --> L1 | `Layout(ScaleAND): sk=ceil(k/64)*2`<br>`shape: ((_1, m), (_1, sk))`<br>`stride: ((_0, sk), (_0, _1))` | `Layout(ZZ): m1=ceil(mL1/_m0) k1=ceil(kL1/_k0)`<br>`shape: ((_m0, m1), (_k0, k1))`<br>`stride: ((_k0, _k0*kL1), (_1, _k0))` | CopyGM2L1 | MTE2|
-| L1 --> L0A| `Layout(ZZ): m1=ceil(mL1/_m0) k1=ceil(kL1/_k0)`<br>`shape: ((_m0, m1), (_k0, k1))`<br>`stride: ((_k0, _k0*kL1), (_1, _k0))` | `Layout(ZZ): m1=ceil(baseM/_m0) k1=ceil(baseK/_k0)`<br>`shape: ((_m0, m1), (_k0, k1))`<br>`stride: ((_k0, _k0*kL1), (_1, _k0))`| CopyL12L0A | MTE1 |
+| GM --> L1 | `Layout(ScaleAND): sk=ceil(k/64)*2`<br>`shape: ((_1, m), (_1, sk))`<br>`stride: ((_0, sk), (_0, _1))` | `Layout(ZZ): m1=ceil(mL1/_m0) k1=ceil(kL1/_k0)`<br>`shape: ((_m0, m1), (_k0, k1))`<br>`stride: ((_k0, _k0*kL1), (_1, _k0))` | copy_gm_to_l1 | MTE2|
+| L1 --> L0A| `Layout(ZZ): m1=ceil(mL1/_m0) k1=ceil(kL1/_k0)`<br>`shape: ((_m0, m1), (_k0, k1))`<br>`stride: ((_k0, _k0*kL1), (_1, _k0))` | `Layout(ZZ): m1=ceil(baseM/_m0) k1=ceil(baseK/_k0)`<br>`shape: ((_m0, m1), (_k0, k1))`<br>`stride: ((_k0, _k0*kL1), (_1, _k0))`| copy_l1_to_l0a | MTE1 |
 
 <div align="center">
   <img src="images/mm_mxfp8fp4_scalea.png" width="100%" alt="Tensor scaleA从GM到L1和L0A_MX的搬运流程" />
@@ -139,7 +139,7 @@ Vector核负责实现类型转换：`float4_e2m1` → `float8_e4m3fn`。Ascend95
 
 | **缓冲区变化** | **Src Layout** | **Dst Layout** | **CopyOperation** | **所属流水** |
 |-|-|-|-|-|
-| L1 --> L0B| `Layout(ZN): k1=ceil(kL1/_k0) n1=ceil(nL1/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*nL1), (_k0, _k0*_n0))` | `Layout(ZN): k1=ceil(baseK/_k0) n1=ceil(baseN/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*baseN), (_k0, _k0*_n0))`| CopyL12L0B | MTE1 |
+| L1 --> L0B| `Layout(ZN): k1=ceil(kL1/_k0) n1=ceil(nL1/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*nL1), (_k0, _k0*_n0))` | `Layout(ZN): k1=ceil(baseK/_k0) n1=ceil(baseN/_n0)`<br>`shape: ((_k0, k1), (_n0, n1))`<br>`stride: ((_1, _k0*baseN), (_k0, _k0*_n0))`| copy_l1_to_l0b | MTE1 |
 
 <div align="center">
   <img src="images/mm_mxfp8fp4_b_aic.png" width="100%" alt="Tensor B在Cube侧从L1到L0B的搬运流程" />
@@ -149,8 +149,8 @@ Vector核负责实现类型转换：`float4_e2m1` → `float8_e4m3fn`。Ascend95
 
 | **缓冲区变化** | **Src Layout** | **Dst Layout** | **CopyOperation** | **所属流水** |
 |-|-|-|-|-|
-| GM --> L1 | `Layout(ScaleBDN): sk=ceil(k/64)*2`<br>`shape: ((_1, sk), (_1, n))`<br>`stride: ((_0, _1), (_0, sk))` | `Layout(NN): sk=ceil(kL1/64)*2 n1=ceil(nL1/_n0)`<br>`shape: ((_k0, sk), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | CopyGM2L1 | MTE2|
-| L1 --> L0B| `Layout(NN): sk=ceil(kL1/64)*2 n1=ceil(nL1/_n0)`<br>`shape: ((_k0, sk), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | `Layout(NN): sk=ceil(baseK/64)*2 n1=ceil(baseN/_n0)`<br>`shape: ((_k0, sk), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))`| CopyL12L0B | MTE1 |
+| GM --> L1 | `Layout(ScaleBDN): sk=ceil(k/64)*2`<br>`shape: ((_1, sk), (_1, n))`<br>`stride: ((_0, _1), (_0, sk))` | `Layout(NN): sk=ceil(kL1/64)*2 n1=ceil(nL1/_n0)`<br>`shape: ((_k0, sk), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | copy_gm_to_l1 | MTE2|
+| L1 --> L0B| `Layout(NN): sk=ceil(kL1/64)*2 n1=ceil(nL1/_n0)`<br>`shape: ((_k0, sk), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))` | `Layout(NN): sk=ceil(baseK/64)*2 n1=ceil(baseN/_n0)`<br>`shape: ((_k0, sk), (_n0, n1))`<br>`stride: ((_1, _k0*_n0*n1), (_k0, _k0*_n0))`| copy_l1_to_l0b | MTE1 |
 
 <div align="center">
   <img src="images/mm_mxfp8fp4_scaleb.png" width="100%" alt="Tensor scaleB从GM到L1和L0B_MX的搬运流程" />
@@ -160,7 +160,7 @@ Vector核负责实现类型转换：`float4_e2m1` → `float8_e4m3fn`。Ascend95
 
 | **缓冲区变化** | **Src Layout** | **Dst Layout** | **CopyOperation** | **所属流水** |
 |-|-|-|-|-|
-| L0C --> GM | `Layout(NZ):`<br>`shape: ((_m0, baseM/_m0), (_n0, baseN/_n0))`<br>`stride: ((_n0, _n0*_m0), (_1, _n0*baseM))` | `Layout(ND):`<br>`shape: (m, n)`<br>`valid: (realM, realN)`<br>`stride: (n, 1)` | CopyL0C2GM | FIXPIPE|
+| L0C --> GM | `Layout(NZ):`<br>`shape: ((_m0, baseM/_m0), (_n0, baseN/_n0))`<br>`stride: ((_n0, _n0*_m0), (_1, _n0*baseM))` | `Layout(ND):`<br>`shape: (m, n)`<br>`valid: (realM, realN)`<br>`stride: (n, 1)` | copy_l0c_to_gm | FIXPIPE|
 
 <div align="center">
   <img src="images/mm_mxfp8fp4_c.png" width="100%" alt="Tensor C从L0C到GM的搬出流程" />

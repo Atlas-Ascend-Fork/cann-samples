@@ -22,10 +22,10 @@ struct CopyUB2L1Weight {
     template <typename Tp, const Tp& traits, typename T, typename U>
     __aicore__ inline static void Copy(const T& dst, const U& src)
     {
-        using type = typename U::elementType;
-        const auto& srcLayout = src.Layout();
-        auto srcShape = AscendC::Te::GetShape(srcLayout);
-        auto srcStride = AscendC::Te::GetStride(srcLayout);
+        using type = typename U::element_type;
+        const auto& srcLayout = src.layout();
+        auto srcShape = asc::te::get_shape(srcLayout);
+        auto srcStride = asc::te::get_stride(srcLayout);
 
         uint16_t c0 = AscendC::Std::get<0>(AscendC::Std::get<0>(srcShape));
         uint16_t k1 = AscendC::Std::get<1>(AscendC::Std::get<0>(srcShape));
@@ -38,7 +38,7 @@ struct CopyUB2L1Weight {
         int64_t srcStrideBlocks = (innerStride * sizeof(type)) / 32 - blockLen;
 
         asc_copy_ub2l1(
-            (__cbuf__ void*)dst.Data().Get(), (__ubuf__ void*)src.Data().Get(), blockCount, blockLen, srcStrideBlocks,
+            (__cbuf__ void*)dst.data().get(), (__ubuf__ void*)src.data().get(), blockCount, blockLen, srcStrideBlocks,
             0);
     }
 };
@@ -46,7 +46,7 @@ struct CopyUB2L1Weight {
 } // namespace Tile
 
 template <>
-struct AscendC::Te::CopyTraits<::Tile::CopyUB2L1Weight>
-    : public AscendC::Te::CopyTraits<
-          ::Tile::CopyUB2L1Weight, AscendC::Te::CopyUB2L1TraitDefault, ::Tile::CopyUB2L1Weight,
-          AscendC::Te::CopyUB2L1TraitDefault> {};
+struct asc::te::copy_traits<::Tile::CopyUB2L1Weight>
+    : public asc::te::copy_traits<
+          ::Tile::CopyUB2L1Weight, asc::te::ub_to_l1_trait_default, ::Tile::CopyUB2L1Weight,
+          asc::te::ub_to_l1_trait_default> {};

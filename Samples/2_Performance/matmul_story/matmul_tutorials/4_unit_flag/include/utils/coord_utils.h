@@ -40,15 +40,15 @@ public:
         int64_t nOffset = nTileIdx * l1N + nSplitOffset;
         if constexpr (enableLoadBalance) {
             if constexpr (!isTransA) {
-                if (mTileIdx > AscendC::Te::Get<IDX_M_BASE_NORM_CNT>(loadBalanceParam)) {
-                    mOffset -= (mTileIdx - AscendC::Te::Get<IDX_M_BASE_NORM_CNT>(loadBalanceParam)) *
-                               (l1M - AscendC::Te::Get<IDX_M_BASE_TAIL_MAIN>(loadBalanceParam));
+                if (mTileIdx > asc::te::get<IDX_M_BASE_NORM_CNT>(loadBalanceParam)) {
+                    mOffset -= (mTileIdx - asc::te::get<IDX_M_BASE_NORM_CNT>(loadBalanceParam)) *
+                               (l1M - asc::te::get<IDX_M_BASE_TAIL_MAIN>(loadBalanceParam));
                 }
             }
             if constexpr (isTransB) {
-                if (nTileIdx > AscendC::Te::Get<IDX_N_BASE_NORM_CNT>(loadBalanceParam)) {
-                    nOffset -= (nTileIdx - AscendC::Te::Get<IDX_N_BASE_NORM_CNT>(loadBalanceParam)) *
-                               (l1N - AscendC::Te::Get<IDX_N_BASE_TAIL_MAIN>(loadBalanceParam));
+                if (nTileIdx > asc::te::get<IDX_N_BASE_NORM_CNT>(loadBalanceParam)) {
+                    nOffset -= (nTileIdx - asc::te::get<IDX_N_BASE_NORM_CNT>(loadBalanceParam)) *
+                               (l1N - asc::te::get<IDX_N_BASE_TAIL_MAIN>(loadBalanceParam));
                 }
             }
         }

@@ -90,15 +90,15 @@ if (tileIdx / blockNum == (perCoreBlockNum - 1) && tailCnt > 1)
     curN = (curN - nSplitOffset) < splitBlkN ? (curN - nSplitOffset) : splitBlkN;
 
     // 重新设置张量GM地址，指向当前子块对应的数据区域
-    tensorAGmBlock = tensorAgm(AscendC::Te::MakeCoord(mTileIdx * baseM + mSplitOffset, 0L), AscendC::Te::MakeShape(curM, k));
-    tensorBGmBlock = tensorBgm(AscendC::Te::MakeCoord(0L, nTileIdx * baseN + nSplitOffset), AscendC::Te::MakeShape(k, curN));
+    tensorAGmBlock = tensorAgm(asc::te::make_coord(mTileIdx * baseM + mSplitOffset, 0L), asc::te::make_shape(curM, k));
+    tensorBGmBlock = tensorBgm(asc::te::make_coord(0L, nTileIdx * baseN + nSplitOffset), asc::te::make_shape(k, curN));
 
     tensorCGmBlock =
-        tensorCgm(AscendC::Te::MakeCoord(mTileIdx * baseM + mSplitOffset, nTileIdx * baseN + nSplitOffset), AscendC::Te::MakeShape(curM, curN));
+        tensorCgm(asc::te::make_coord(mTileIdx * baseM + mSplitOffset, nTileIdx * baseN + nSplitOffset), asc::te::make_shape(curM, curN));
     
     // 根据实际输出尺寸重新设置L0C布局
-    layoutL0C = AscendC::Te::MakeL0CLayout(curM, curN);  // L0C layout for output
-    tensorL0C = AscendC::Te::MakeTensor(AscendC::Te::MakeL0CmemPtr<float>(l0cOffset), layoutL0C);
+    layoutL0C = asc::te::make_frame_layout<asc::te::nz_layout_ptn, AscendC::Std::Int<tool::L0C_C0>>(curM, curN);  // L0C layout for output
+    tensorL0C = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l0c, float>(l0cOffset), layoutL0C);
 }
 
 ```

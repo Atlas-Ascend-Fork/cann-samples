@@ -108,8 +108,8 @@ private:
 
         auto layoutA = MakeLayoutA{}(m, k);
         auto layoutB = MakeLayoutB{}(k, n);
-        auto gmAFull = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(aGmBase_), layoutA);
-        auto gmBFull = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(bGmBase_), layoutB);
+        auto gmAFull = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(aGmBase_), layoutA);
+        auto gmBFull = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(bGmBase_), layoutB);
 
         if ((bs.GetEndBlockIdx() + 1) * params.schParams.mTailTile * params.schParams.nTailTile <=
             AscendC::GetBlockNum()) {
@@ -148,18 +148,18 @@ private:
         // UB row pitch aligned to 32B.
         constexpr int64_t UB_FLOAT_ALIGN = 32 / sizeof(float);
         if ASCEND_IS_AIC {
-            auto gmBlockA = gmAFull.Slice(AscendC::Te::MakeCoord(mPos, kPos), AscendC::Te::MakeShape(curM, k));
-            auto gmBlockB = gmBFull.Slice(AscendC::Te::MakeCoord(kPos, nPos), AscendC::Te::MakeShape(k, curN));
+            auto gmBlockA = gmAFull.slice(asc::te::make_coord(mPos, kPos), asc::te::make_shape(curM, k));
+            auto gmBlockB = gmBFull.slice(asc::te::make_coord(kPos, nPos), asc::te::make_shape(k, curN));
 
             // ubC: destination tensor on the AIV UB (tensor_api, local offset 0).
-            // M aligned to 2 (DUAL_DST_SPLIT_M halves M), N aligned to 8 floats (32B, as blaze).
+            // M aligned to 2 (dual_dst_mode::split_m halves M), N aligned to 8 floats (32B, as blaze).
             // Each AIV actually receives curMAligned/2 rows with row pitch curNAligned
             // (the epilogue reads with the same pitch).
             const int64_t curNAligned = (curN + UB_FLOAT_ALIGN - 1) / UB_FLOAT_ALIGN * UB_FLOAT_ALIGN;
             const int64_t curMAligned = (curM + 1) / 2 * 2;
-            auto layoutUbC = AscendC::Te::MakeFrameLayout<AscendC::Te::NDLayoutPtn>(curMAligned, curNAligned);
+            auto layoutUbC = asc::te::make_frame_layout<asc::te::nd_layout_ptn>(curMAligned, curNAligned);
             auto ubC =
-                AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, L0CType>(0), layoutUbC);
+                asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::ub, L0CType>(0), layoutUbC);
 
             // Phase 1: Mmad accumulation (writes L0C, overlaps with the AIV epilogue of the previous tile).
             mmadOp_.Compute(gmBlockA, gmBlockB, singleShape);

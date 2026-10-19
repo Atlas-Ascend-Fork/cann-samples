@@ -48,27 +48,27 @@ This example implements multi-core matrix multiplication computation based on th
     <table>
     <tr><th align="left">Step</th><th align="left">Tensor API Operation</th><th align="left">Function</th><th align="left">Layout Transformation</th></tr>
     <tr><td align="left">1</td><td align="left">Constant Tiling Parameters</td><td align="left">Pass to kernel through template parameters</td><td align="left">Not applicable</td></tr>
-    <tr><td align="left">2</td><td align="left">MakeTensor + Slice</td><td align="left">Create GM tensor and slice to get data block processed by current core</td><td align="left">ND format</td></tr>
-    <tr><td align="left">3</td><td align="left">Copy(CopyGM2L1)</td><td align="left">Move A matrix and B matrix data from GM to L1</td><td align="left">ND->NZ format conversion</td></tr>
-    <tr><td align="left">4</td><td align="left">Copy(CopyL12L0A/B)</td><td align="left">Move data from L1 to L0A and L0B</td><td align="left">L1->L0A: NZ->NZ<br>L1->L0B: NZ->ZN</td></tr>
-    <tr><td align="left">5</td><td align="left">Mmad</td><td align="left">Complete matrix multiply-accumulate computation</td><td align="left">Matrix multiplication result is NZ format</td></tr>
-    <tr><td align="left">6</td><td align="left">Copy(CopyL0C2GM)</td><td align="left">Move computation result from L0C to GM</td><td align="left">NZ->ND format conversion</td></tr>
+    <tr><td align="left">2</td><td align="left">make_tensor + slice</td><td align="left">Create GM tensor and slice to get data block processed by current core</td><td align="left">ND format</td></tr>
+    <tr><td align="left">3</td><td align="left">copy(copy_gm_to_l1)</td><td align="left">Move A matrix and B matrix data from GM to L1</td><td align="left">ND->NZ format conversion</td></tr>
+    <tr><td align="left">4</td><td align="left">copy(copy_l1_to_l0a/b)</td><td align="left">Move data from L1 to L0A and L0B</td><td align="left">L1->L0A: NZ->NZ<br>L1->L0B: NZ->ZN</td></tr>
+    <tr><td align="left">5</td><td align="left">mmad</td><td align="left">Complete matrix multiply-accumulate computation</td><td align="left">Matrix multiplication result is NZ format</td></tr>
+    <tr><td align="left">6</td><td align="left">copy(copy_l0c_to_gm)</td><td align="left">Move computation result from L0C to GM</td><td align="left">NZ->ND format conversion</td></tr>
     </table>
 
   - Tensor API Core Interfaces:
-    1. **Tensor Creation Interface**: Use MakeTensor + MakeMemPtr + MakeFrameLayout to create tensors at each level
-       - GM Tensor: NDExtLayoutPtn layout (ND format extension)
-       - L1/L0 Tensor: NZLayoutPtn/ZNLayoutPtn layout (adapted to cube compute unit)
+    1. **Tensor Creation Interface**: Use make_tensor + make_mem_ptr + make_frame_layout to create tensors at each level
+       - GM Tensor: nd_ext_layout_ptn layout (ND format extension)
+       - L1/L0 Tensor: nz_layout_ptn/zn_layout_ptn layout (adapted to cube compute unit)
 
-    2. **Data Movement Interface**: Use Copy + CopyAtom abstraction
-       - CopyGM2L1: Data movement from GM to L1, automatically handles ND→NZ format conversion
-       - CopyL12L0A/B: Data movement from L1 to L0A/L0B
-       - CopyL0C2GM: Data movement from L0C to GM, automatically handles NZ→ND format conversion
+    2. **Data Movement Interface**: Use copy + copy_atom abstraction
+       - copy_gm_to_l1: Data movement from GM to L1, automatically handles ND→NZ format conversion
+       - copy_l1_to_l0a/b: Data movement from L1 to L0A/L0B
+       - copy_l0c_to_gm: Data movement from L0C to GM, automatically handles NZ→ND format conversion
 
-    3. **Matrix Multiplication Interface**: Use Mmad + MmadAtom abstraction
-       - Automatically manages accumulation control (cmatrixInitVal parameter)
+    3. **Matrix Multiplication Interface**: Use mmad + mmad_atom abstraction
+       - Automatically manages accumulation control (init_with_zero parameter)
 
-    4. **Slicing Interface**: Use Slice + MakeCoord + MakeShape to get tensor sub-regions
+    4. **Slicing Interface**: Use slice + make_coord + make_shape to get tensor sub-regions
        - Implements multi-core logic: each core processes different data blocks
        - Implements tiling logic: baseM/baseK/baseN basic block partitioning
 

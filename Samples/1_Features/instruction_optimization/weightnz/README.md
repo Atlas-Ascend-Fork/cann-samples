@@ -27,11 +27,11 @@
 
 ```C++
 // 为矩阵 B 创建 FRACTAL_NZ 排布：K 维度上的分块大小为 cube_size（即 32/sizeof(T)），N 维度上的分块大小为 16
-auto layoutB = AscendC::Te::MakeNzLayout<T>(
+auto layoutB = asc::te::make_frame_layout<asc::te::nz_layout_ptn>(
     tool::CeilAlign(k, tool::CUBE_SIZE / sizeof(T)),   // 将 K 维度对齐到 cube_size 的倍数
     tool::CeilAlign(n, 16)                             // 将 N 维度对齐到 16 的倍数
 );
-auto tensorBgm = AscendC::Te::MakeTensor(AscendC::Te::MakeGMmemPtr(reinterpret_cast<__gm__ T*>(bGm)), layoutB);
+auto tensorBgm = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ T*>(bGm)), layoutB);
 ```
 
 **关键改动点**：

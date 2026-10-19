@@ -116,16 +116,16 @@ __aicore__ inline void MatmulKernelStreamK<ProblemShape, BlockMmad, BlockSchedul
     workspaceGmAddr_ = reinterpret_cast<__gm__ float*>(blockMmadParams_.workspaceGmAddr);
     BlockSchedulerOp bs(params.problemShape, params.schParams);
     TupleShape tileL1 = {params.kernelParams.mL1, params.kernelParams.nL1, params.kernelParams.kL1};
-    int64_t mL1 = AscendC::Te::Get<MNK_M>(tileL1);
-    int64_t nL1 = AscendC::Te::Get<MNK_N>(tileL1);
-    int64_t kL1 = AscendC::Te::Get<MNK_K>(tileL1);
-    int64_t mTileNum = AscendC::Te::Get<MNK_M>(bs.GetMNKTileNum());
-    int64_t nTileNum = AscendC::Te::Get<MNK_N>(bs.GetMNKTileNum());
-    int64_t skKTileNum = AscendC::Te::Get<MNK_K>(bs.GetMNKTileNum()); // it only used in sk
+    int64_t mL1 = asc::te::get<MNK_M>(tileL1);
+    int64_t nL1 = asc::te::get<MNK_N>(tileL1);
+    int64_t kL1 = asc::te::get<MNK_K>(tileL1);
+    int64_t mTileNum = asc::te::get<MNK_M>(bs.GetMNKTileNum());
+    int64_t nTileNum = asc::te::get<MNK_N>(bs.GetMNKTileNum());
+    int64_t skKTileNum = asc::te::get<MNK_K>(bs.GetMNKTileNum()); // it only used in sk
     int64_t tileNum = bs.GetTotalTileNum();
 
     if ASCEND_IS_AIC {
-        int64_t curBlockIdx = AscendC::GetBlockIdx();
+        int64_t curBlockIdx = block_idx;
         TupleShape tileL0 = {params.kernelParams.baseM, params.kernelParams.baseN, params.kernelParams.baseK};
         if (curBlockIdx >= bs.GetBlockNum(usedCoreNum_)) {
             AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG);
@@ -140,24 +140,24 @@ __aicore__ inline void MatmulKernelStreamK<ProblemShape, BlockMmad, BlockSchedul
         AscendC::SetMMLayoutTransform(true);
         BlockMmad blockMmadOp(problemShape_, tileL1, tileL0);
         int64_t tailSKTotalTileNum = static_cast<int64_t>(((mTileNum * nTileNum) % usedCoreNum_) * skKTileNum);
-        int64_t m = AscendC::Te::Get<MNK_M>(problemShape_);
-        int64_t n = AscendC::Te::Get<MNK_N>(problemShape_);
-        int64_t k = AscendC::Te::Get<MNK_K>(problemShape_);
+        int64_t m = asc::te::get<MNK_M>(problemShape_);
+        int64_t n = asc::te::get<MNK_N>(problemShape_);
+        int64_t k = asc::te::get<MNK_K>(problemShape_);
 
         auto layoutA = MakeLayoutA{}(m, k);
         auto layoutB = MakeLayoutB{}(k, n);
         auto layoutC = MakeLayoutC{}(m, n);
 
-        auto gmA = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(
+        auto gmA = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(
                 reinterpret_cast<__gm__ TypeA*>(blockMmadParams_.aGmAddr)),
             layoutA);
-        auto gmB = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(
+        auto gmB = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(
                 reinterpret_cast<__gm__ TypeB*>(blockMmadParams_.bGmAddr)),
             layoutB);
-        auto gmC = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(
+        auto gmC = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(
                 reinterpret_cast<__gm__ TypeC*>(blockMmadParams_.cGmAddr)),
             layoutC);
 
@@ -177,21 +177,21 @@ __aicore__ inline void MatmulKernelStreamK<ProblemShape, BlockMmad, BlockSchedul
             auto singleCoreCoord = bs.GetSingleCoreCoord(tmpTileIdx);
             int64_t kSingleCore = bs.GetCurKSingleCore(tmpTileIdx);
             int64_t offsetWorkspace =
-                (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum + AscendC::Te::Get<MNK_K>(singleCoreCoord)) * BLOCK_BASE_M *
+                (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum + asc::te::get<MNK_K>(singleCoreCoord)) * BLOCK_BASE_M *
                 BLOCK_BASE_N;
-            auto layoutWorkspace = AscendC::Te::MakeFrameLayout<AscendC::Te::NDExtLayoutPtn>(
-                AscendC::Te::Get<MNK_M>(singleCoreShape), AscendC::Te::Get<MNK_N>(singleCoreShape));
+            auto layoutWorkspace = asc::te::make_frame_layout<asc::te::nd_ext_layout_ptn>(
+                asc::te::get<MNK_M>(singleCoreShape), asc::te::get<MNK_N>(singleCoreShape));
             auto gmWorkSpace =
-                AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(workspaceGmAddr_ + offsetWorkspace), layoutWorkspace);
-            auto gmBlockA = gmA.Slice(AscendC::Te::MakeCoord(AscendC::Te::Get<MNK_M>(singleCoreCoord) * mL1, AscendC::Te::Get<MNK_K>(singleCoreCoord) * kSingleCore),
-                AscendC::Te::MakeShape(AscendC::Te::Get<MNK_M>(singleCoreShape), AscendC::Te::Get<MNK_K>(singleCoreShape)));
-            auto gmBlockB = gmB.Slice(AscendC::Te::MakeCoord(AscendC::Te::Get<MNK_K>(singleCoreCoord) * kSingleCore, AscendC::Te::Get<MNK_N>(singleCoreCoord) * nL1),
-                AscendC::Te::MakeShape(AscendC::Te::Get<MNK_K>(singleCoreShape), AscendC::Te::Get<MNK_N>(singleCoreShape)));
+                asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(workspaceGmAddr_ + offsetWorkspace), layoutWorkspace);
+            auto gmBlockA = gmA.slice(asc::te::make_coord(asc::te::get<MNK_M>(singleCoreCoord) * mL1, asc::te::get<MNK_K>(singleCoreCoord) * kSingleCore),
+                asc::te::make_shape(asc::te::get<MNK_M>(singleCoreShape), asc::te::get<MNK_K>(singleCoreShape)));
+            auto gmBlockB = gmB.slice(asc::te::make_coord(asc::te::get<MNK_K>(singleCoreCoord) * kSingleCore, asc::te::get<MNK_N>(singleCoreCoord) * nL1),
+                asc::te::make_shape(asc::te::get<MNK_K>(singleCoreShape), asc::te::get<MNK_N>(singleCoreShape)));
             auto gmBlockC =
-                gmC.Slice(AscendC::Te::MakeCoord(AscendC::Te::Get<MNK_M>(singleCoreCoord) * mL1, AscendC::Te::Get<MNK_N>(singleCoreCoord) * nL1),
-                    AscendC::Te::MakeShape(AscendC::Te::Get<MNK_M>(singleCoreShape), AscendC::Te::Get<MNK_N>(singleCoreShape)));
+                gmC.slice(asc::te::make_coord(asc::te::get<MNK_M>(singleCoreCoord) * mL1, asc::te::get<MNK_N>(singleCoreCoord) * nL1),
+                    asc::te::make_shape(asc::te::get<MNK_M>(singleCoreShape), asc::te::get<MNK_N>(singleCoreShape)));
             blockMmadOp(
-                gmBlockC, gmBlockA, gmBlockB, gmWorkSpace, singleCoreShape, AscendC::Te::Get<MNK_K>(singleCoreCoord),
+                gmBlockC, gmBlockA, gmBlockB, gmWorkSpace, singleCoreShape, asc::te::get<MNK_K>(singleCoreCoord),
                 bs.CheckIsSkScene(tmpTileIdx));
             if (tmpTileIdx + usedCoreNum_ >= tileNum) {
                 AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG);

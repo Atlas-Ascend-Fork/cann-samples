@@ -104,7 +104,7 @@ __aicore__ inline void MatmulKernelSwat<ProblemShape, BlockMmad, BlockScheduler>
     if ASCEND_IS_AIV {
         return;
     }
-    int64_t curBlockIdx = AscendC::GetBlockIdx();
+    int64_t curBlockIdx = block_idx;
     int64_t blockNum = AscendC::GetBlockNum();
     problemShape_ = ToShapeTuple(params.problemShape);
     blockMmadParams_ = params.mmadParams;
@@ -126,23 +126,23 @@ __aicore__ inline void MatmulKernelSwat<ProblemShape, BlockMmad, BlockScheduler>
     // Instantiate mmadOp
     BlockMmad blockMmadOp(problemShape_, tileL1, tileL0, l0cDB);
 
-    int64_t m = AscendC::Te::Get<MNK_M>(problemShape_);
-    int64_t n = AscendC::Te::Get<MNK_N>(problemShape_);
-    int64_t k = AscendC::Te::Get<MNK_K>(problemShape_);
+    int64_t m = asc::te::get<MNK_M>(problemShape_);
+    int64_t n = asc::te::get<MNK_N>(problemShape_);
+    int64_t k = asc::te::get<MNK_K>(problemShape_);
 
     auto layoutA = MakeLayoutA{}(m, k); // ND layout for A
     auto layoutB = MakeLayoutB{}(k, n); // ND layout for B
     auto layoutC = MakeLayoutC{}(m, n); // ND layout for C
 
     // A,B,C Gm Tensor
-    auto gmA = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ TypeA*>(blockMmadParams_.aGmAddr)),
+    auto gmA = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ TypeA*>(blockMmadParams_.aGmAddr)),
         layoutA);
-    auto gmB = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ TypeB*>(blockMmadParams_.bGmAddr)),
+    auto gmB = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ TypeB*>(blockMmadParams_.bGmAddr)),
         layoutB);
-    auto gmC = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ TypeC*>(blockMmadParams_.cGmAddr)),
+    auto gmC = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ TypeC*>(blockMmadParams_.cGmAddr)),
         layoutC);
 
     // Process tiles in ping-pong mode
@@ -150,12 +150,12 @@ __aicore__ inline void MatmulKernelSwat<ProblemShape, BlockMmad, BlockScheduler>
         auto tileShape = bs.GetBlockShape(tileIdx); // (m, n, k, b)
         auto tileCoord = bs.GetBlockCoord(tileIdx); // (m, n, k, b)
         auto gmBlockA =
-            gmA.Slice(AscendC::MakeCoord(AscendC::Te::Get<0>(tileCoord), 0), AscendC::MakeShape(AscendC::Te::Get<0>(tileShape), AscendC::Te::Get<2>(tileShape)));
+            gmA.slice(AscendC::MakeCoord(asc::te::get<0>(tileCoord), 0), AscendC::MakeShape(asc::te::get<0>(tileShape), asc::te::get<2>(tileShape)));
         auto gmBlockB =
-            gmB.Slice(AscendC::MakeCoord(0, AscendC::Te::Get<1>(tileCoord)), AscendC::MakeShape(AscendC::Te::Get<2>(tileShape), AscendC::Te::Get<1>(tileShape)));
+            gmB.slice(AscendC::MakeCoord(0, asc::te::get<1>(tileCoord)), AscendC::MakeShape(asc::te::get<2>(tileShape), asc::te::get<1>(tileShape)));
         auto gmBlockC =
-            gmC.Slice(AscendC::MakeCoord(AscendC::Te::Get<0>(tileCoord), AscendC::Te::Get<1>(tileCoord)),
-                AscendC::MakeShape(AscendC::Te::Get<0>(tileShape), AscendC::Te::Get<1>(tileShape)));
+            gmC.slice(AscendC::MakeCoord(asc::te::get<0>(tileCoord), asc::te::get<1>(tileCoord)),
+                AscendC::MakeShape(asc::te::get<0>(tileShape), asc::te::get<1>(tileShape)));
         blockMmadOp(gmBlockC, gmBlockA, gmBlockB, tileShape);
     }
 

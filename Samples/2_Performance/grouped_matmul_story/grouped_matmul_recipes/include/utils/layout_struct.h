@@ -12,10 +12,10 @@
 #include "include/tensor_api/tensor.h"
 #include "kernel_utils/common_utils.h"
 
-namespace AscendC {
-namespace Te {
+namespace asc {
+namespace te {
 
-// Layout for 4-bit weight - NZ (fractal) format
+// layout for 4-bit weight - NZ (fractal) format
 // Storage shape: [K/C0, N/BLOCK, BLOCK, C0]
 // Used for both UB and GM
 template <typename T>
@@ -28,21 +28,21 @@ struct Weight4BitLayout {
         int64_t k1 = CeilDiv(kSize, C0);
         int64_t n1 = CeilDiv(nSize, BLOCK);
 
-        // Shape: ((C0, k1), (BLOCK, n1))
-        auto shape = AscendC::Te::MakeShape(
-            AscendC::Te::MakeShape(AscendC::Std::Int<C0>{}, k1),
-            AscendC::Te::MakeShape(AscendC::Std::Int<BLOCK>{}, n1));
-        // Stride: (MakeStride(1, n1 * BLOCK * C0), MakeStride(C0, BLOCK * C0))
-        auto stride = AscendC::Te::MakeStride(
-            AscendC::Te::MakeStride(AscendC::Std::Int<STRIDE_UNIT>{},
+        // shape: ((C0, k1), (BLOCK, n1))
+        auto shape = asc::te::make_shape(
+            asc::te::make_shape(AscendC::Std::Int<C0>{}, k1),
+            asc::te::make_shape(AscendC::Std::Int<BLOCK>{}, n1));
+        // stride: (make_stride(1, n1 * BLOCK * C0), make_stride(C0, BLOCK * C0))
+        auto stride = asc::te::make_stride(
+            asc::te::make_stride(AscendC::Std::Int<STRIDE_UNIT>{},
                                     n1 * AscendC::Std::Int<BLOCK>{} * AscendC::Std::Int<C0>{}),
-            AscendC::Te::MakeStride(AscendC::Std::Int<C0>{},
+            asc::te::make_stride(AscendC::Std::Int<C0>{},
                                     AscendC::Std::Int<BLOCK>{} * AscendC::Std::Int<C0>{}));
-        return AscendC::Te::MakeLayout(shape, stride);
+        return asc::te::make_layout(shape, stride);
     }
 };
 
-// Layout format for 8-bit weight in UB
+// layout format for 8-bit weight in UB
 // Storage shape: [K/C0, N/N0, N0, C0] where N0 = VEC_REG_ELEM / C0
 template <typename T, uint64_t InnerStride>
 struct Weight8BitUBLayout {
@@ -55,20 +55,20 @@ struct Weight8BitUBLayout {
         int64_t k1 = CeilDiv(kSize, C0);
         int64_t n1 = CeilDiv(nSize, N0);
 
-        // Shape: ((C0, k1), (N0, n1))
-        auto shape = AscendC::Te::MakeShape(
-            AscendC::Te::MakeShape(AscendC::Std::Int<C0>{}, k1),
-            AscendC::Te::MakeShape(AscendC::Std::Int<N0>{}, n1));
-        // Stride: (MakeStride(1, n1 * InnerStride), MakeStride(C0, InnerStride))
-        auto stride = AscendC::Te::MakeStride(
-            AscendC::Te::MakeStride(AscendC::Std::Int<STRIDE_UNIT>{},
+        // shape: ((C0, k1), (N0, n1))
+        auto shape = asc::te::make_shape(
+            asc::te::make_shape(AscendC::Std::Int<C0>{}, k1),
+            asc::te::make_shape(AscendC::Std::Int<N0>{}, n1));
+        // stride: (make_stride(1, n1 * InnerStride), make_stride(C0, InnerStride))
+        auto stride = asc::te::make_stride(
+            asc::te::make_stride(AscendC::Std::Int<STRIDE_UNIT>{},
                                     n1 * AscendC::Std::Int<InnerStride>{}),
-            AscendC::Te::MakeStride(AscendC::Std::Int<C0>{},
+            asc::te::make_stride(AscendC::Std::Int<C0>{},
                                     AscendC::Std::Int<InnerStride>{}));
-        return AscendC::Te::MakeLayout(shape, stride);
+        return asc::te::make_layout(shape, stride);
     }
 };
 
-} // namespace Te
-} // namespace AscendC
+} // namespace te
+} // namespace asc
 

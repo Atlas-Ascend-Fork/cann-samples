@@ -16,23 +16,23 @@
 
 #include "include/tensor_api/tensor.h"
 
-namespace AscendC {
-namespace Te {
+namespace asc {
+namespace te {
 
 // Custom GM-to-UB copy for packed 4-bit weight tensors.
 struct CopyGM2UBWeight {
     template <typename Tp, const Tp& traits, typename T, typename U>
     __aicore__ inline static void Copy(const T& dst, const U& src)
     {
-        const auto& dstLayout = dst.Layout();
-        const auto& srcLayout = src.Layout();
+        const auto& dstLayout = dst.layout();
+        const auto& srcLayout = src.layout();
 
-        uint8_t cacheMode = src.Engine().GetCacheMode();
+        uint8_t cacheMode = src.engine().get_cache_mode();
 
-        // Get shape and stride
-        auto srcShape = AscendC::Te::GetShape(srcLayout);
-        auto srcStrideTuple = AscendC::Te::GetStride(srcLayout);
-        auto dstStrideTuple = AscendC::Te::GetStride(dstLayout);
+        // get shape and stride
+        auto srcShape = asc::te::get_shape(srcLayout);
+        auto srcStrideTuple = asc::te::get_stride(srcLayout);
+        auto dstStrideTuple = asc::te::get_stride(dstLayout);
 
         // Extract k1 from shape: ((c0, k1), (n0, n1)).
         uint16_t blockCount = AscendC::Std::get<1>(AscendC::Std::get<0>(srcShape));
@@ -43,17 +43,17 @@ struct CopyGM2UBWeight {
         int64_t dstStride = AscendC::Std::get<1>(AscendC::Std::get<0>(dstStrideTuple)) >> 1;
 
         asc_copy_gm2ub_align(
-            (__ubuf__ uint8_t*)dst.Data().Get(), (__gm__ uint8_t*)src.Data().Get(), blockCount, blockLen, 0, 0, false,
+            (__ubuf__ uint8_t*)dst.data().get(), (__gm__ uint8_t*)src.data().get(), blockCount, blockLen, 0, 0, false,
             cacheMode, srcStride, dstStride);
     }
 };
 
-} // namespace Te
-} // namespace AscendC
+} // namespace te
+} // namespace asc
 
-// Register CopyTraits for the custom GM-to-UB packed-weight copy.
+// Register copy_traits for the custom GM-to-UB packed-weight copy.
 template <>
-struct AscendC::Te::CopyTraits<AscendC::Te::CopyGM2UBWeight>
-    : public AscendC::Te::CopyTraits<
-          AscendC::Te::CopyGM2UBWeight, AscendC::Te::CopyGM2UBTraitDefault, AscendC::Te::CopyGM2UBWeight,
-          AscendC::Te::CopyGM2UBTraitDefault> {};
+struct asc::te::copy_traits<asc::te::CopyGM2UBWeight>
+    : public asc::te::copy_traits<
+          asc::te::CopyGM2UBWeight, asc::te::gm_to_ub_trait_default, asc::te::CopyGM2UBWeight,
+          asc::te::gm_to_ub_trait_default> {};

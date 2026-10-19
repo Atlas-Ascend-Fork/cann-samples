@@ -34,24 +34,24 @@
 // 第一段：处理第一个分片（tileIdx / blockNum == 0 且是第一轮迭代 iter0 == 0）
 if (tileIdx / blockNum == 0 && iter0 == 0) {
     // 等待该 L1 缓冲区上之前的 MTE1（L1 -> GM）和 MTE2（GM -> L1）操作完成
-    AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
+    asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(l1BufId));
     
     // 为 L1 缓冲区 A 创建张量，并从全局内存中拷贝第一个分片的 A 数据
     auto tensorAL1First =
-        AscendC::Te::MakeTensor(AscendC::Te::MakeL1memPtr<T>(l1BufferAOffset[l1BufId]), layoutAL1);
+        asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferAOffset[l1BufId]), layoutAL1);
     auto tensorAGmTileFirst =
-        tensorAGmBlock(AscendC::Te::MakeCoord(0, iter0 * kL1), AscendC::Te::MakeShape(curM, curGmAKL1));
-    AscendC::Te::Copy(copyGM2L1, tensorAL1First, tensorAGmTileFirst);
+        tensorAGmBlock(asc::te::make_coord(0, iter0 * kL1), asc::te::make_shape(curM, curGmAKL1));
+    asc::te::copy(copyGM2L1, tensorAL1First, tensorAGmTileFirst);
 
     // 为 L1 缓冲区 B 创建张量，并从全局内存中拷贝第一个分片的 B 数据
     auto tensorBL1First =
-        AscendC::Te::MakeTensor(AscendC::Te::MakeL1memPtr<T>(l1BufferBOffset[l1BufId]), layoutBL1);
+        asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferBOffset[l1BufId]), layoutBL1);
     auto tensorBGmTileFirst =
-        tensorBGmBlock(AscendC::Te::MakeCoord(iter0 * kL1, 0), AscendC::Te::MakeShape(curGmBKL1, curN));
-    AscendC::Te::Copy(copyGM2L1, tensorBL1First, tensorBGmTileFirst);
+        tensorBGmBlock(asc::te::make_coord(iter0 * kL1, 0), asc::te::make_shape(curGmBKL1, curN));
+    asc::te::copy(copyGM2L1, tensorBL1First, tensorBGmTileFirst);
 
     // 设置标志位，同步 MTE2 -> MTE1，表示拷贝完成
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(l1BufId);
+    asc_sync_notify(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(l1BufId));
 }
 ```
 
@@ -61,28 +61,28 @@ if (tileIdx / blockNum == 0 && iter0 == 0) {
 // 第二块：双缓冲预取下一个tile
 if (iter0 + 1 < kL1TileNum) {     
     // 等待目标缓冲区空闲
-    AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(1 - l1BufId);
+    asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(1 - l1BufId));
     
     // 重新计算下一块的数据布局
-    layoutAL1 = AscendC::Te::MakeLayoutAL1<T>{}(curM, NextCurGmAKL1);
-    layoutBL1 = AscendC::Te::MakeLayoutBL1<T>{}(NextCurGmBKL1, curN);
+    layoutAL1 = asc::te::MakeLayoutAL1<T>{}(curM, NextCurGmAKL1);
+    layoutBL1 = asc::te::MakeLayoutBL1<T>{}(NextCurGmBKL1, curN);
     
     // 预取A矩阵的下一块到备用L1缓冲区
     auto tensorAL1Sec =
-        AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, T>(l1BufferAOffset[1 - l1BufId]), layoutAL1);
-    auto tensorAGmTileSec = tensorAGmBlock.Slice(
-        AscendC::Te::MakeCoord(0, (iter0 + 1) * kL1), AscendC::Te::MakeShape(curM, NextCurGmAKL1));
-    AscendC::Te::Copy(copyGM2L1, tensorAL1Sec, tensorAGmTileSec);
+        asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferAOffset[1 - l1BufId]), layoutAL1);
+    auto tensorAGmTileSec = tensorAGmBlock.slice(
+        asc::te::make_coord(0, (iter0 + 1) * kL1), asc::te::make_shape(curM, NextCurGmAKL1));
+    asc::te::copy(copyGM2L1, tensorAL1Sec, tensorAGmTileSec);
 
     // 预取B矩阵的下一块到备用L1缓冲区
     auto tensorBL1Sec =
-        AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, T>(l1BufferBOffset[1 - l1BufId]), layoutBL1);
-    auto tensorBGmTileSec = tensorBGmBlock.Slice(
-        AscendC::Te::MakeCoord((iter0 + 1) * kL1, 0), AscendC::Te::MakeShape(NextCurGmBKL1, curN));
-    AscendC::Te::Copy(copyGM2L1, tensorBL1Sec, tensorBGmTileSec);
+        asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferBOffset[1 - l1BufId]), layoutBL1);
+    auto tensorBGmTileSec = tensorBGmBlock.slice(
+        asc::te::make_coord((iter0 + 1) * kL1, 0), asc::te::make_shape(NextCurGmBKL1, curN));
+    asc::te::copy(copyGM2L1, tensorBL1Sec, tensorBGmTileSec);
 
     // 标记数据已准备好
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(1 - l1BufId);
+    asc_sync_notify(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(1 - l1BufId));
 }
 ```
 
@@ -94,7 +94,7 @@ if (iter0 + 1 < kL1TileNum) {
 //   2. tileIdx + blockNum < tileNum：还有未处理的tile块（不是全局最后一个块）
 if (iter0 + 1 == kL1TileNum && tileIdx + blockNum < tileNum) {
     // 等待备用缓冲区上的异步操作完成，确保可以安全写入下一轮的数据
-    AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(1 - l1BufId);
+    asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(1 - l1BufId));
     
     // 计算下一轮要处理的tile索引（将一维索引转换为二维(M,N)坐标）
     // blockNum：每个tile包含的K维子块数量，用于跨轮次索引跳转
@@ -111,35 +111,35 @@ if (iter0 + 1 == kL1TileNum && tileIdx + blockNum < tileNum) {
     int64_t nextRoundBKL1 = nextRoundAKL1;  // A和B在K维度大小必须一致
 
     // 根据新的tile尺寸重新计算L1缓冲区布局（适应可能的边界形状变化）
-    layoutAL1 = AscendC::Te::MakeLayoutAL1<T>{}(nextRoundM, nextRoundAKL1);
-    layoutBL1 = AscendC::Te::MakeLayoutBL1<T>{}(nextRoundBKL1, nextRoundN);
+    layoutAL1 = asc::te::MakeLayoutAL1<T>{}(nextRoundM, nextRoundAKL1);
+    layoutBL1 = asc::te::MakeLayoutBL1<T>{}(nextRoundBKL1, nextRoundN);
 
     // 从全局张量中切出下一轮要处理的完整块（包含所有K维度数据）
-    auto nextTensorAGmBlock = tensorAgm.Slice(
-        AscendC::Te::MakeCoord(nextMTileIdx * baseM, 0L), 
-        AscendC::Te::MakeShape(nextRoundM, k));
-    auto nextTensorBGmBlock = tensorBgm.Slice(
-        AscendC::Te::MakeCoord(0L, nextNTileIdx * baseN), 
-        AscendC::Te::MakeShape(k, nextRoundN));
+    auto nextTensorAGmBlock = tensorAgm.slice(
+        asc::te::make_coord(nextMTileIdx * baseM, 0L), 
+        asc::te::make_shape(nextRoundM, k));
+    auto nextTensorBGmBlock = tensorBgm.slice(
+        asc::te::make_coord(0L, nextNTileIdx * baseN), 
+        asc::te::make_shape(k, nextRoundN));
 
     // 预取下一轮的A矩阵第一个K分片（从新GM块中取起始位置）
     auto tensorAL1Sec =
-        AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, T>(l1BufferAOffset[1 - l1BufId]), layoutAL1);
-    auto tensorAGmTileSec = nextTensorAGmBlock.Slice(
-        AscendC::Te::MakeCoord(0, 0),  // 从新块的开头开始取
-        AscendC::Te::MakeShape(nextRoundM, nextRoundAKL1));
-    AscendC::Te::Copy(copyGM2L1, tensorAL1Sec, tensorAGmTileSec);
+        asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferAOffset[1 - l1BufId]), layoutAL1);
+    auto tensorAGmTileSec = nextTensorAGmBlock.slice(
+        asc::te::make_coord(0, 0),  // 从新块的开头开始取
+        asc::te::make_shape(nextRoundM, nextRoundAKL1));
+    asc::te::copy(copyGM2L1, tensorAL1Sec, tensorAGmTileSec);
 
     // 预取下一轮的B矩阵第一个K分片
     auto tensorBL1Sec =
-        AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, T>(l1BufferBOffset[1 - l1BufId]), layoutBL1);
-    auto tensorBGmTileSec = nextTensorBGmBlock.Slice(
-        AscendC::Te::MakeCoord(0, 0),  // 从新块的开头开始取
-        AscendC::Te::MakeShape(nextRoundBKL1, nextRoundN));
-    AscendC::Te::Copy(copyGM2L1, tensorBL1Sec, tensorBGmTileSec);
+        asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferBOffset[1 - l1BufId]), layoutBL1);
+    auto tensorBGmTileSec = nextTensorBGmBlock.slice(
+        asc::te::make_coord(0, 0),  // 从新块的开头开始取
+        asc::te::make_shape(nextRoundBKL1, nextRoundN));
+    asc::te::copy(copyGM2L1, tensorBL1Sec, tensorBGmTileSec);
 
     // 标记数据准备就绪，下一轮计算开始时可以直接使用
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(1 - l1BufId);
+    asc_sync_notify(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(1 - l1BufId));
 }
 ```
 

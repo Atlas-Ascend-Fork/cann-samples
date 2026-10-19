@@ -23,16 +23,16 @@ public:
     __aicore__ inline __attribute__((always_inline)) BlockAttnResUpdateFullD()
     {
         if constexpr (!SINGLE_TILE) {
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID0);
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID1);
+            asc_sync_notify(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+            asc_sync_notify(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
         }
     }
 
     __aicore__ inline __attribute__((always_inline)) ~BlockAttnResUpdateFullD()
     {
         if constexpr (!SINGLE_TILE) {
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID0);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID1);
+            asc_sync_wait(PIPE_MTE3, PIPE_MTE2, EVENT_ID0);
+            asc_sync_wait(PIPE_MTE3, PIPE_MTE2, EVENT_ID1);
         }
     }
 
@@ -78,14 +78,14 @@ private:
         const uint32_t dAlignBf16 = (dSize + BARU_BF16_ALIGN_MASK) & ~BARU_BF16_ALIGN_MASK;
         const uint32_t statsTStride = tilingData_->statsTStride;
 
-        auto copyGmToUb = Te::MakeCopy(Te::CopyGM2UB{});
-        auto queryGmLayout = Te::MakeFrameLayout<Te::NDExtLayoutPtn>(1L, static_cast<int64_t>(dSize));
-        auto pseudoQueryGm = Te::MakeTensor(Te::MakeMemPtr<Te::Location::GM>(pseudoQueryGm_), queryGmLayout);
-        auto queryUbLayout = Te::MakeFrameLayout<Te::NDExtLayoutPtn>(1L, static_cast<int64_t>(dAlignFp32));
-        auto pseudoQueryUbMem = Te::MakeMemPtr<Te::Location::UB, float>(0);
-        auto pseudoQueryUb = Te::MakeTensor(pseudoQueryUbMem, queryUbLayout);
+        auto copyGmToUb = Te::make_copy(Te::copy_gm_to_ub{});
+        auto queryGmLayout = Te::make_frame_layout<Te::nd_ext_layout_ptn>(1L, static_cast<int64_t>(dSize));
+        auto pseudoQueryGm = Te::make_tensor(Te::make_mem_ptr<Te::location::gm>(pseudoQueryGm_), queryGmLayout);
+        auto queryUbLayout = Te::make_frame_layout<Te::nd_ext_layout_ptn>(1L, static_cast<int64_t>(dAlignFp32));
+        auto pseudoQueryUbMem = Te::make_mem_ptr<Te::location::ub, float>(0);
+        auto pseudoQueryUb = Te::make_tensor(pseudoQueryUbMem, queryUbLayout);
         // Start the core-invariant Phase 1 input first, then prepare the remaining scalar descriptors while MTE2 runs.
-        Te::Copy(copyGmToUb, pseudoQueryUb, pseudoQueryGm);
+        Te::copy(copyGmToUb, pseudoQueryUb, pseudoQueryGm);
 
         // Keep runtime 0/1 loop bounds on the scalar side. Deriving them inside __simd_vf__ can trigger
         // HiIPUVectorLoopUnrollPass failures at -O2/-O3.
@@ -102,131 +102,131 @@ private:
         const float eps = tilingData_->eps;
         const float invD = tilingData_->invD;
         auto matrixGmLayout =
-            Te::MakeFrameLayout<Te::NDExtLayoutPtn>(static_cast<int64_t>(coreTSize), static_cast<int64_t>(dSize));
-        auto statsGmLayout = Te::MakeFrameLayout<Te::NDExtLayoutPtn>(1L, static_cast<int64_t>(coreTSize));
-        auto partialBlockGm = Te::MakeTensor(
-            Te::MakeMemPtr<Te::Location::GM>(partialBlockGm_ + coreTStart * static_cast<int64_t>(dSize)),
+            Te::make_frame_layout<Te::nd_ext_layout_ptn>(static_cast<int64_t>(coreTSize), static_cast<int64_t>(dSize));
+        auto statsGmLayout = Te::make_frame_layout<Te::nd_ext_layout_ptn>(1L, static_cast<int64_t>(coreTSize));
+        auto partialBlockGm = Te::make_tensor(
+            Te::make_mem_ptr<Te::location::gm>(partialBlockGm_ + coreTStart * static_cast<int64_t>(dSize)),
             matrixGmLayout);
-        auto deltaGm = Te::MakeTensor(
-            Te::MakeMemPtr<Te::Location::GM>(deltaGm_ + coreTStart * static_cast<int64_t>(dSize)), matrixGmLayout);
-        auto numeratorGm = Te::MakeTensor(
-            Te::MakeMemPtr<Te::Location::GM>(numeratorGm_ + coreTStart * static_cast<int64_t>(dSize)), matrixGmLayout);
-        auto logitMaxGm = Te::MakeTensor(Te::MakeMemPtr<Te::Location::GM>(logitMaxGm_ + coreTStart), statsGmLayout);
-        auto expSumGm = Te::MakeTensor(Te::MakeMemPtr<Te::Location::GM>(expSumGm_ + coreTStart), statsGmLayout);
-        auto hGm = Te::MakeTensor(
-            Te::MakeMemPtr<Te::Location::GM>(hGm_ + coreTStart * static_cast<int64_t>(dSize)), matrixGmLayout);
+        auto deltaGm = Te::make_tensor(
+            Te::make_mem_ptr<Te::location::gm>(deltaGm_ + coreTStart * static_cast<int64_t>(dSize)), matrixGmLayout);
+        auto numeratorGm = Te::make_tensor(
+            Te::make_mem_ptr<Te::location::gm>(numeratorGm_ + coreTStart * static_cast<int64_t>(dSize)), matrixGmLayout);
+        auto logitMaxGm = Te::make_tensor(Te::make_mem_ptr<Te::location::gm>(logitMaxGm_ + coreTStart), statsGmLayout);
+        auto expSumGm = Te::make_tensor(Te::make_mem_ptr<Te::location::gm>(expSumGm_ + coreTStart), statsGmLayout);
+        auto hGm = Te::make_tensor(
+            Te::make_mem_ptr<Te::location::gm>(hGm_ + coreTStart * static_cast<int64_t>(dSize)), matrixGmLayout);
 
         auto fp32UbLayout =
-            Te::MakeFrameLayout<Te::NDExtLayoutPtn>(static_cast<int64_t>(tileT), static_cast<int64_t>(dAlignFp32));
+            Te::make_frame_layout<Te::nd_ext_layout_ptn>(static_cast<int64_t>(tileT), static_cast<int64_t>(dAlignFp32));
         auto bf16UbLayout =
-            Te::MakeFrameLayout<Te::NDExtLayoutPtn>(static_cast<int64_t>(tileT), static_cast<int64_t>(dAlignBf16));
-        auto statsUbLayout = Te::MakeFrameLayout<Te::NDExtLayoutPtn>(
+            Te::make_frame_layout<Te::nd_ext_layout_ptn>(static_cast<int64_t>(tileT), static_cast<int64_t>(dAlignBf16));
+        auto statsUbLayout = Te::make_frame_layout<Te::nd_ext_layout_ptn>(
             static_cast<int64_t>(BARU_STATS_PLANE_NUM), static_cast<int64_t>(statsTStride));
 
-        auto copyUbToGm = Te::MakeCopy(Te::CopyUB2GM{});
+        auto copyUbToGm = Te::make_copy(Te::copy_ub_to_gm{});
 
         // SINGLE_TILE executes one iteration; multi-tile mode alternates the two UB buffers until coreTSize is covered.
         for (uint32_t tileTStart = 0, bufferId = 0; SINGLE_TILE || tileTStart < coreTSize;) {
             const uint32_t remainingT = coreTSize - tileTStart;
             const uint32_t currentTSize = remainingT < tileT ? remainingT : tileT;
             const int64_t tileTStartDim = static_cast<int64_t>(tileTStart);
-            const auto matrixTileShape = Te::MakeShape(static_cast<int64_t>(currentTSize), static_cast<int64_t>(dSize));
+            const auto matrixTileShape = Te::make_shape(static_cast<int64_t>(currentTSize), static_cast<int64_t>(dSize));
 
-            auto partialBlockGmTile = partialBlockGm.Slice(Te::MakeCoord(tileTStartDim, 0L), matrixTileShape);
-            auto deltaGmTile = deltaGm.Slice(Te::MakeCoord(tileTStartDim, 0L), matrixTileShape);
+            auto partialBlockGmTile = partialBlockGm.slice(Te::make_coord(tileTStartDim, 0L), matrixTileShape);
+            auto deltaGmTile = deltaGm.slice(Te::make_coord(tileTStartDim, 0L), matrixTileShape);
 
             const uint64_t partialUbOffset = queryUbBytes_ + static_cast<uint64_t>(bufferId) * bufferUbBytes_;
             const uint64_t deltaHUbOffset = partialUbOffset + partialUbBytes_;
-            auto partialUbMem = Te::MakeMemPtr<Te::Location::UB, float>(partialUbOffset);
-            auto deltaHUbMem = Te::MakeMemPtr<Te::Location::UB, bfloat16_t>(deltaHUbOffset);
-            auto partialUbStorage = Te::MakeTensor(partialUbMem, fp32UbLayout);
-            auto deltaHUbStorage = Te::MakeTensor(deltaHUbMem, bf16UbLayout);
-            auto partialUb = partialUbStorage.Slice(Te::MakeCoord(0L, 0L), matrixTileShape);
-            auto deltaHUb = deltaHUbStorage.Slice(Te::MakeCoord(0L, 0L), matrixTileShape);
+            auto partialUbMem = Te::make_mem_ptr<Te::location::ub, float>(partialUbOffset);
+            auto deltaHUbMem = Te::make_mem_ptr<Te::location::ub, bfloat16_t>(deltaHUbOffset);
+            auto partialUbStorage = Te::make_tensor(partialUbMem, fp32UbLayout);
+            auto deltaHUbStorage = Te::make_tensor(deltaHUbMem, bf16UbLayout);
+            auto partialUb = partialUbStorage.slice(Te::make_coord(0L, 0L), matrixTileShape);
+            auto deltaHUb = deltaHUbStorage.slice(Te::make_coord(0L, 0L), matrixTileShape);
 
             // Phase 1 copy-in. Prepare Phase 2 descriptors below while these MTE2 transfers are in flight.
             if constexpr (!SINGLE_TILE) {
-                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(bufferId);
+                asc_sync_wait(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(bufferId));
             }
-            Te::Copy(copyGmToUb, partialUb, partialBlockGmTile);
-            Te::Copy(copyGmToUb, deltaHUb, deltaGmTile);
+            Te::copy(copyGmToUb, partialUb, partialBlockGmTile);
+            Te::copy(copyGmToUb, deltaHUb, deltaGmTile);
 
-            const auto statsTileShape = Te::MakeShape(1L, static_cast<int64_t>(currentTSize));
-            auto numeratorGmTile = numeratorGm.Slice(Te::MakeCoord(tileTStartDim, 0L), matrixTileShape);
-            auto logitMaxGmTile = logitMaxGm.Slice(Te::MakeCoord(0L, tileTStartDim), statsTileShape);
-            auto expSumGmTile = expSumGm.Slice(Te::MakeCoord(0L, tileTStartDim), statsTileShape);
-            auto hGmTile = hGm.Slice(Te::MakeCoord(tileTStartDim, 0L), matrixTileShape);
+            const auto statsTileShape = Te::make_shape(1L, static_cast<int64_t>(currentTSize));
+            auto numeratorGmTile = numeratorGm.slice(Te::make_coord(tileTStartDim, 0L), matrixTileShape);
+            auto logitMaxGmTile = logitMaxGm.slice(Te::make_coord(0L, tileTStartDim), statsTileShape);
+            auto expSumGmTile = expSumGm.slice(Te::make_coord(0L, tileTStartDim), statsTileShape);
+            auto hGmTile = hGm.slice(Te::make_coord(tileTStartDim, 0L), matrixTileShape);
 
             const uint64_t numeratorUbOffset = deltaHUbOffset + deltaHUbBytes_;
             const uint64_t statsUbOffset = numeratorUbOffset + partialUbBytes_;
-            auto numeratorUbMem = Te::MakeMemPtr<Te::Location::UB, float>(numeratorUbOffset);
-            auto statsUbMem = Te::MakeMemPtr<Te::Location::UB, float>(statsUbOffset);
-            auto numeratorUbStorage = Te::MakeTensor(numeratorUbMem, fp32UbLayout);
-            auto statsUbStorage = Te::MakeTensor(statsUbMem, statsUbLayout);
-            auto numeratorUb = numeratorUbStorage.Slice(Te::MakeCoord(0L, 0L), matrixTileShape);
-            auto logitMaxUb = statsUbStorage.Slice(
-                Te::MakeCoord(static_cast<int64_t>(BARU_LOGIT_MAX_PLANE_INDEX), 0L), statsTileShape);
+            auto numeratorUbMem = Te::make_mem_ptr<Te::location::ub, float>(numeratorUbOffset);
+            auto statsUbMem = Te::make_mem_ptr<Te::location::ub, float>(statsUbOffset);
+            auto numeratorUbStorage = Te::make_tensor(numeratorUbMem, fp32UbLayout);
+            auto statsUbStorage = Te::make_tensor(statsUbMem, statsUbLayout);
+            auto numeratorUb = numeratorUbStorage.slice(Te::make_coord(0L, 0L), matrixTileShape);
+            auto logitMaxUb = statsUbStorage.slice(
+                Te::make_coord(static_cast<int64_t>(BARU_LOGIT_MAX_PLANE_INDEX), 0L), statsTileShape);
             auto expSumUb =
-                statsUbStorage.Slice(Te::MakeCoord(static_cast<int64_t>(BARU_EXP_SUM_PLANE_INDEX), 0L), statsTileShape);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(bufferId);
+                statsUbStorage.slice(Te::make_coord(static_cast<int64_t>(BARU_EXP_SUM_PLANE_INDEX), 0L), statsTileShape);
+            asc_sync_notify(PIPE_MTE2, PIPE_V, static_cast<event_t>(bufferId));
 
             // Phase 1 compute.
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(bufferId);
+            asc_sync_wait(PIPE_MTE2, PIPE_V, static_cast<event_t>(bufferId));
             // TwoVLVF is specialized for D spanning at most two FP32 vector-register widths.
             if (dSize <= BARU_VREG_FP32_ELEMENTS) {
                 asc_vf_call<BlockAttnResUpdatePhase1OneVLVF>(
-                    partialUbMem.Get(), deltaHUbMem.Get(), pseudoQueryUbMem.Get(), statsUbMem.Get(),
+                    partialUbMem.get(), deltaHUbMem.get(), pseudoQueryUbMem.get(), statsUbMem.get(),
                     static_cast<uint16_t>(currentTSize), dSize, dAlignFp32, dAlignBf16, statsTStride, eps, invD,
                     hasDTail);
             } else if (dSize <= BARU_VREG_PAIR_ELEMENTS) {
                 asc_vf_call<BlockAttnResUpdatePhase1TwoVLVF>(
-                    partialUbMem.Get(), deltaHUbMem.Get(), pseudoQueryUbMem.Get(), statsUbMem.Get(),
+                    partialUbMem.get(), deltaHUbMem.get(), pseudoQueryUbMem.get(), statsUbMem.get(),
                     static_cast<uint16_t>(currentTSize), dSize, dAlignFp32, dAlignBf16, statsTStride, eps, invD,
                     hasDTail);
             } else {
                 asc_vf_call<BlockAttnResUpdatePhase1VF>(
-                    partialUbMem.Get(), deltaHUbMem.Get(), pseudoQueryUbMem.Get(), statsUbMem.Get(),
+                    partialUbMem.get(), deltaHUbMem.get(), pseudoQueryUbMem.get(), statsUbMem.get(),
                     static_cast<uint16_t>(currentTSize), dSize, dAlignFp32, dAlignBf16, statsTStride, eps, invD,
                     hasMixedDPair, phase1HasSingleRemainder, phase1HasRemainder, phase1RemainderD);
             }
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(bufferId);
+            asc_sync_notify(PIPE_V, PIPE_MTE3, static_cast<event_t>(bufferId));
 
             // Queue the partial copy-out as soon as its Phase 1 dependency is established.
             // MTE3 waits for Phase 1 while Scalar continues issuing the independent Phase 2 MTE2 copy-in.
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(bufferId);
-            Te::Copy(copyUbToGm, partialBlockGmTile, partialUb);
+            asc_sync_wait(PIPE_V, PIPE_MTE3, static_cast<event_t>(bufferId));
+            Te::copy(copyUbToGm, partialBlockGmTile, partialUb);
 
             // Phase 2 copy-in can overlap Phase 1 compute because it writes disjoint UB regions.
             const uint32_t phase2EventId = bufferId + BARU_BUFFER_NUM;
-            Te::Copy(copyGmToUb, numeratorUb, numeratorGmTile);
-            Te::Copy(copyGmToUb, logitMaxUb, logitMaxGmTile);
-            Te::Copy(copyGmToUb, expSumUb, expSumGmTile);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(phase2EventId);
+            Te::copy(copyGmToUb, numeratorUb, numeratorGmTile);
+            Te::copy(copyGmToUb, logitMaxUb, logitMaxGmTile);
+            Te::copy(copyGmToUb, expSumUb, expSumGmTile);
+            asc_sync_notify(PIPE_MTE2, PIPE_V, static_cast<event_t>(phase2EventId));
 
             // The partial copy-out and Phase 2 only read partial, so MTE3 and V may overlap.
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(phase2EventId);
+            asc_sync_wait(PIPE_MTE2, PIPE_V, static_cast<event_t>(phase2EventId));
             // TwoVLVF is specialized for D spanning at most two FP32 vector-register widths.
             if (dSize <= BARU_VREG_FP32_ELEMENTS) {
                 asc_vf_call<BlockAttnResUpdatePhase2OneVLVF>(
-                    partialUbMem.Get(), deltaHUbMem.Get(), numeratorUbMem.Get(), statsUbMem.Get(),
+                    partialUbMem.get(), deltaHUbMem.get(), numeratorUbMem.get(), statsUbMem.get(),
                     static_cast<uint16_t>(currentTSize), dSize, dAlignFp32, dAlignBf16, statsTStride);
             } else if (dSize <= BARU_VREG_PAIR_ELEMENTS) {
                 asc_vf_call<BlockAttnResUpdatePhase2TwoVLVF>(
-                    partialUbMem.Get(), deltaHUbMem.Get(), numeratorUbMem.Get(), statsUbMem.Get(),
+                    partialUbMem.get(), deltaHUbMem.get(), numeratorUbMem.get(), statsUbMem.get(),
                     static_cast<uint16_t>(currentTSize), dSize, dAlignFp32, dAlignBf16, statsTStride);
             } else {
                 asc_vf_call<BlockAttnResUpdatePhase2VF>(
-                    partialUbMem.Get(), deltaHUbMem.Get(), numeratorUbMem.Get(), statsUbMem.Get(),
+                    partialUbMem.get(), deltaHUbMem.get(), numeratorUbMem.get(), statsUbMem.get(),
                     static_cast<uint16_t>(currentTSize), dSize, dAlignFp32, dAlignBf16, statsTStride, fullDLoops,
                     hasDTail, hasMixedDPair, hasOddFullDOnly, hasDTailOnly);
             }
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(phase2EventId);
+            asc_sync_notify(PIPE_V, PIPE_MTE3, static_cast<event_t>(phase2EventId));
 
             // Phase 2 copy-out closes this buffer's reuse dependency chain.
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(phase2EventId);
-            Te::Copy(copyUbToGm, hGmTile, deltaHUb);
+            asc_sync_wait(PIPE_V, PIPE_MTE3, static_cast<event_t>(phase2EventId));
+            Te::copy(copyUbToGm, hGmTile, deltaHUb);
             if constexpr (!SINGLE_TILE) {
-                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(bufferId);
+                asc_sync_notify(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(bufferId));
             }
             if constexpr (SINGLE_TILE) {
                 break;

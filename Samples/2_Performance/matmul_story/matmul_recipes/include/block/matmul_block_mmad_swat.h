@@ -42,16 +42,16 @@ public:
     using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t>;
     using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
     static constexpr bool transA =
-        AscendC::IsSameType<LayoutA, AscendC::Te::FrameLayoutFormat<AscendC::Te::DNExtLayoutPtn>>::value;
+        AscendC::IsSameType<LayoutA, asc::te::frame_layout_format<asc::te::dn_ext_layout_ptn>>::value;
     static constexpr bool transB =
-        AscendC::IsSameType<LayoutB, AscendC::Te::FrameLayoutFormat<AscendC::Te::DNExtLayoutPtn>>::value;
+        AscendC::IsSameType<LayoutB, asc::te::frame_layout_format<asc::te::dn_ext_layout_ptn>>::value;
     static constexpr int32_t L0C_C0 = 16;
     using MakeLayoutAL1 = AscendC::Std::conditional_t<
-        transA, AscendC::Te::FrameLayoutFormat<AscendC::Te::ZNLayoutPtn, AscendC::Te::LayoutTraitDefault<TypeA>>,
-        AscendC::Te::FrameLayoutFormat<AscendC::Te::NZLayoutPtn, AscendC::Te::LayoutTraitDefault<TypeA>>>;
+        transA, asc::te::frame_layout_format<asc::te::zn_layout_ptn, asc::te::layout_trait_default<TypeA>>,
+        asc::te::frame_layout_format<asc::te::nz_layout_ptn, asc::te::layout_trait_default<TypeA>>>;
     using MakeLayoutBL1 = AscendC::Std::conditional_t<
-        transB, AscendC::Te::FrameLayoutFormat<AscendC::Te::ZNLayoutPtn, AscendC::Te::LayoutTraitDefault<TypeB>>,
-        AscendC::Te::FrameLayoutFormat<AscendC::Te::NZLayoutPtn, AscendC::Te::LayoutTraitDefault<TypeB>>>;
+        transB, asc::te::frame_layout_format<asc::te::zn_layout_ptn, asc::te::layout_trait_default<TypeB>>,
+        asc::te::frame_layout_format<asc::te::nz_layout_ptn, asc::te::layout_trait_default<TypeB>>>;
     uint64_t m_{1};
     uint64_t n_{1};
     uint64_t k_{1};
@@ -81,24 +81,24 @@ public:
     };
 
     // Custom mmadTrait internal value type
-    constexpr static AscendC::Te::MmadTrait MMAD_TRAIT{0, false, false, true, AscendC::Te::MmadType::NORMAL};
+    constexpr static asc::te::mmad_trait MMAD_TRAIT{0, false, false, true, asc::te::mmad_type::normal};
     struct MmadMmTraitConfig { // Custom Trait class
-        using TraitType = AscendC::Te::MmadTrait;
+        using TraitType = asc::te::mmad_trait;
         constexpr static const TraitType value = MMAD_TRAIT;
     };
 
     __aicore__ inline BlockMmad(
         const TupleShape& problemShape, const TupleShape& tileL1Shape, const TupleShape& tileL0Shape, bool l0cDB)
     {
-        m_ = AscendC::Te::Get<IDX_M_IDX>(problemShape);
-        n_ = AscendC::Te::Get<IDX_N_IDX>(problemShape);
-        k_ = AscendC::Te::Get<IDX_K_IDX>(problemShape);
-        mL1_ = AscendC::Te::Get<IDX_M_IDX>(tileL1Shape);
-        nL1_ = AscendC::Te::Get<IDX_N_IDX>(tileL1Shape);
-        kL1_ = AscendC::Te::Get<IDX_K_IDX>(tileL1Shape);
-        baseM_ = AscendC::Te::Get<IDX_M_IDX>(tileL0Shape);
-        baseN_ = AscendC::Te::Get<IDX_N_IDX>(tileL0Shape);
-        baseK_ = AscendC::Te::Get<IDX_K_IDX>(tileL0Shape);
+        m_ = asc::te::get<IDX_M_IDX>(problemShape);
+        n_ = asc::te::get<IDX_N_IDX>(problemShape);
+        k_ = asc::te::get<IDX_K_IDX>(problemShape);
+        mL1_ = asc::te::get<IDX_M_IDX>(tileL1Shape);
+        nL1_ = asc::te::get<IDX_N_IDX>(tileL1Shape);
+        kL1_ = asc::te::get<IDX_K_IDX>(tileL1Shape);
+        baseM_ = asc::te::get<IDX_M_IDX>(tileL0Shape);
+        baseN_ = asc::te::get<IDX_N_IDX>(tileL0Shape);
+        baseK_ = asc::te::get<IDX_K_IDX>(tileL0Shape);
         kAlign_ = Align(k_, AscendC::BLOCK_CUBE);
         enableL0cPingPong_ = l0cDB;
         // Non-full load
@@ -119,8 +119,8 @@ public:
     template <typename TensorC, typename TensorA, typename TensorB>
     __aicore__ inline void operator()(TensorC gmC, TensorA gmA, TensorB gmB, const BlockShape& tileShape)
     {
-        uint64_t curM = AscendC::Te::Get<MNK_M>(tileShape);
-        uint64_t curN = AscendC::Te::Get<MNK_N>(tileShape);
+        uint64_t curM = asc::te::get<MNK_M>(tileShape);
+        uint64_t curN = asc::te::get<MNK_N>(tileShape);
         uint64_t ml1Align = Align(curM, AscendC::BLOCK_CUBE);
         uint64_t l0cOffset = (l0cPingPong_ & 0x1) * HALF_L0C_SIZE;
         if (enableL0cPingPong_) {
@@ -130,9 +130,9 @@ public:
         kL1_ = Min(k_, kL1_);
 
         // LoC move out
-        auto layoutL0C = AscendC::Te::MakeFrameLayout<AscendC::Te::NZLayoutPtn, AscendC::Std::Int<L0C_C0>>(curM, curN);
+        auto layoutL0C = asc::te::make_frame_layout<asc::te::nz_layout_ptn, AscendC::Std::Int<L0C_C0>>(curM, curN);
         auto tensorL0C =
-            AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0C, L0CType>(l0cOffset), layoutL0C);
+            asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l0c, L0CType>(l0cOffset), layoutL0C);
 
         kL1Iter_ = CeilDiv(k_, kL1_); // k_ >= kL1_
         // Loop of k in L1
@@ -147,22 +147,22 @@ public:
 
             // A GM->L1
             auto layoutAL1 = MakeLayoutAL1{}(static_cast<int64_t>(curM), static_cast<int64_t>(curKL1));
-            auto copyGM2L1 = AscendC::Te::MakeCopy(AscendC::Te::CopyGM2L1{});
-            auto tensorAL1 = AscendC::Te::MakeTensor(
-                AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, TypeA>(offsetAl1), layoutAL1);
+            auto copyGM2L1 = asc::te::make_copy(asc::te::copy_gm_to_l1{});
+            auto tensorAL1 = asc::te::make_tensor(
+                asc::te::make_mem_ptr<asc::te::location::l1, TypeA>(offsetAl1), layoutAL1);
             // Slice first
-            auto gmTileA = gmA.Slice(AscendC::Te::MakeCoord(0, iter0 * kL1_), AscendC::Te::MakeShape(curM, curKL1));
+            auto gmTileA = gmA.slice(asc::te::make_coord(0, iter0 * kL1_), asc::te::make_shape(curM, curKL1));
             // Copy AL1
-            AscendC::Te::Copy(copyGM2L1, tensorAL1, gmTileA);
+            asc::te::copy(copyGM2L1, tensorAL1, gmTileA);
 
             // B GM->L1
             auto layoutBL1 = MakeLayoutBL1{}(static_cast<int64_t>(curKL1), static_cast<int64_t>(curN));
-            auto tensorBL1 = AscendC::Te::MakeTensor(
-                AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, TypeB>(offsetBl1), layoutBL1);
+            auto tensorBL1 = asc::te::make_tensor(
+                asc::te::make_mem_ptr<asc::te::location::l1, TypeB>(offsetBl1), layoutBL1);
             // Slice first
-            auto gmTileB = gmB.Slice(AscendC::Te::MakeCoord(iter0 * kL1_, 0), AscendC::Te::MakeShape(curKL1, curN));
+            auto gmTileB = gmB.slice(asc::te::make_coord(iter0 * kL1_, 0), asc::te::make_shape(curKL1, curN));
             // Copy BL1
-            AscendC::Te::Copy(copyGM2L1, tensorBL1, gmTileB);
+            asc::te::copy(copyGM2L1, tensorBL1, gmTileB);
 
             // A/B GM->L1 写完：MTE2 释放，MTE1 占用该 L1（覆盖整段 L1->L0 搬运）。
             AscendC::Mutex::Unlock<PIPE_MTE2>(L1Mutex(l1BufId));
@@ -178,42 +178,42 @@ public:
                 AscendC::Mutex::Lock<PIPE_MTE1>(L0Mutex(static_cast<uint16_t>(mte1Flag)));
 
                 // A L1->L0
-                auto copyL12L0A = AscendC::Te::MakeCopy(AscendC::Te::CopyL12L0A{});
-                auto copyL12L0B = AscendC::Te::MakeCopy(AscendC::Te::CopyL12L0B{});
+                auto copyL12L0A = asc::te::make_copy(asc::te::copy_l1_to_l0a{});
+                auto copyL12L0B = asc::te::make_copy(asc::te::copy_l1_to_l0b{});
                 auto layoutAL0 =
-                    AscendC::Te::MakeFrameLayout<AscendC::Te::NZLayoutPtn, AscendC::Te::LayoutTraitDefault<TypeA>>(
+                    asc::te::make_frame_layout<asc::te::nz_layout_ptn, asc::te::layout_trait_default<TypeA>>(
                         curM, curK0);
-                auto tensorAL0 = AscendC::Te::MakeTensor(
-                    AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0A, TypeA>(l0Offset), layoutAL0);
+                auto tensorAL0 = asc::te::make_tensor(
+                    asc::te::make_mem_ptr<asc::te::location::l0a, TypeA>(l0Offset), layoutAL0);
                 auto tensorBlockAL1 =
-                    tensorAL1.Slice(AscendC::Te::MakeCoord(0, iter1 * baseK_), AscendC::Te::MakeShape(curM, curK0));
-                AscendC::Te::Copy(copyL12L0A, tensorAL0, tensorBlockAL1);
+                    tensorAL1.slice(asc::te::make_coord(0, iter1 * baseK_), asc::te::make_shape(curM, curK0));
+                asc::te::copy(copyL12L0A, tensorAL0, tensorBlockAL1);
 
                 // B L1->L0
                 auto layoutBL0 =
-                    AscendC::Te::MakeFrameLayout<AscendC::Te::ZNLayoutPtn, AscendC::Te::LayoutTraitDefault<TypeB>>(
+                    asc::te::make_frame_layout<asc::te::zn_layout_ptn, asc::te::layout_trait_default<TypeB>>(
                         curK0, curN);
-                auto tensorBL0 = AscendC::Te::MakeTensor(
-                    AscendC::Te::MakeMemPtr<AscendC::Te::Location::L0B, TypeB>(l0Offset), layoutBL0);
+                auto tensorBL0 = asc::te::make_tensor(
+                    asc::te::make_mem_ptr<asc::te::location::l0b, TypeB>(l0Offset), layoutBL0);
                 auto tensorBlockBL1 =
-                    tensorBL1.Slice(AscendC::Te::MakeCoord(iter1 * baseK_, 0), AscendC::Te::MakeShape(curK0, curN));
-                AscendC::Te::Copy(copyL12L0B, tensorBL0, tensorBlockBL1);
+                    tensorBL1.slice(asc::te::make_coord(iter1 * baseK_, 0), asc::te::make_shape(curK0, curN));
+                asc::te::copy(copyL12L0B, tensorBL0, tensorBlockBL1);
 
                 // L1->L0 搬运完成：MTE1 释放，M 占用该 L0 做 Mmad。
                 AscendC::Mutex::Unlock<PIPE_MTE1>(L0Mutex(static_cast<uint16_t>(mte1Flag)));
                 AscendC::Mutex::Lock<PIPE_M>(L0Mutex(static_cast<uint16_t>(mte1Flag)));
 
                 // Original mmad parameters
-                uint8_t unitFlag =
+                asc::te::unit_flag_mode unitFlag =
                     enableL0cPingPong_ ?
-                        0 :
-                        ((iter0 + 1 == kL1Iter_ && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION : NON_FINAL_ACCUMULATION);
+                        asc::te::unit_flag_mode::disable :
+                        ((iter0 + 1 == kL1Iter_ && iter1 + 1 == kL0Iter) ? asc::te::unit_flag_mode::enable_update : asc::te::unit_flag_mode::enable_keep);
                 bool cmatrixInitVal = (iter0 == 0 && iter1 == 0);
-                AscendC::Te::MmadParams mmadParams(curM, curN, curK0, unitFlag, cmatrixInitVal);
+                asc::te::mmad_params mmadParams(curM, curN, curK0, unitFlag, cmatrixInitVal);
 
                 // Pass custom Trait type in mmad
-                AscendC::Te::Mmad(
-                    AscendC::Te::MmadAtom<AscendC::Te::MmadTraits<AscendC::Te::MmadOperation, MmadMmTraitConfig>>{}
+                asc::te::mmad(
+                    asc::te::mmad_atom<asc::te::mmad_traits<asc::te::mmad_operation, MmadMmTraitConfig>>{}
                         .with(mmadParams),
                     tensorL0C, tensorAL0, tensorBL0);
 
@@ -232,10 +232,10 @@ public:
         }
 
         // Move data to GM
-        AscendC::Te::FixpipeParams fixpParams;
-        fixpParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION;
-        auto copyL0C2GM = AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2GM{});
-        AscendC::Te::Copy(copyL0C2GM.with(fixpParams), gmC, tensorL0C);
+        asc::te::l0c_to_gm_params fixpParams;
+        fixpParams.unit_flag = enableL0cPingPong_ ? asc::te::unit_flag_mode::disable : asc::te::unit_flag_mode::enable_update;
+        auto copyL0C2GM = asc::te::make_copy(asc::te::copy_l0c_to_gm{});
+        asc::te::copy(copyL0C2GM.with(fixpParams), gmC, tensorL0C);
 
         if (enableL0cPingPong_) {
             // L0C->GM 完成：FIX 释放该 L0C。

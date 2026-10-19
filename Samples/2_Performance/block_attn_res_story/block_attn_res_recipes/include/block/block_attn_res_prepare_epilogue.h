@@ -59,14 +59,14 @@ public:
     __aicore__ inline BlockEpilogueBlockAttnResPrepare()
     {
         if ASCEND_IS_AIV {
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(DEFAULT_EVENT_ID);
+            asc_sync_notify(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(DEFAULT_EVENT_ID));
         }
     }
 
     __aicore__ inline ~BlockEpilogueBlockAttnResPrepare()
     {
         if ASCEND_IS_AIV {
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(DEFAULT_EVENT_ID);
+            asc_sync_wait(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(DEFAULT_EVENT_ID));
         }
     }
 
@@ -109,8 +109,8 @@ private:
     __aicore__ inline auto MakeVUbTensor(const VTensor& vTensor, uint32_t bufferIndex) const
     {
         const uint64_t byteOffset = static_cast<uint64_t>(bufferIndex) * params_->vUbElems * sizeof(ElementType);
-        const int64_t rows = AscendC::Te::GetTotalRowShape(vTensor.Layout());
-        const int64_t columns = AscendC::Te::GetTotalColumnShape(vTensor.Layout());
+        const int64_t rows = asc::te::get_total_row_shape(vTensor.layout());
+        const int64_t columns = asc::te::get_total_column_shape(vTensor.layout());
         return MakeUbTensor<ElementType>(byteOffset, rows, columns, params_->baseDAlign);
     }
 
@@ -118,14 +118,14 @@ private:
     __aicore__ inline void LoadVTile(const VTensor& vTensor, uint32_t bufferIndex)
     {
         auto vUbTensor = MakeVUbTensor(vTensor, bufferIndex);
-        auto copyGmToUb = AscendC::Te::MakeCopy(AscendC::Te::CopyGM2UB{});
-        AscendC::Te::Copy(copyGmToUb, vUbTensor, vTensor);
+        auto copyGmToUb = asc::te::make_copy(asc::te::copy_gm_to_ub{});
+        asc::te::copy(copyGmToUb, vUbTensor, vTensor);
     }
 
     template <bool FirstDTile, typename VTensor>
     __aicore__ inline void ReduceVTile(const VTensor& vTensor, uint32_t bufferIndex)
     {
-        const int64_t validN = AscendC::Te::GetTotalRowShape(vTensor.Layout());
+        const int64_t validN = asc::te::get_total_row_shape(vTensor.layout());
         auto vUbTensor = MakeVUbTensor(vTensor, bufferIndex);
         auto sumSquareTensor = MakeUbTensor<ElementType>(reduceUbOffset_, 1, validN, validN);
         BlockAttnResPrepareMix::Epilogue::Tile::ReduceSquare<FirstDTile>::Run(vUbTensor, sumSquareTensor);
@@ -134,14 +134,14 @@ private:
     template <typename VTensor>
     __aicore__ inline auto SliceVTile(const VTensor& vTensor, uint32_t dTileIdx) const
     {
-        const uint64_t totalD = AscendC::Te::GetTotalColumnShape(vTensor.Layout());
+        const uint64_t totalD = asc::te::get_total_column_shape(vTensor.layout());
         const uint64_t dOffset = static_cast<uint64_t>(dTileIdx) * params_->baseD;
         const uint64_t remainingD = totalD - dOffset;
         const int64_t validD = static_cast<int64_t>(remainingD < params_->baseD ? remainingD : params_->baseD);
-        const int64_t validN = AscendC::Te::GetTotalRowShape(vTensor.Layout());
-        return vTensor.Slice(
-            AscendC::Te::MakeCoord(static_cast<int64_t>(0), static_cast<int64_t>(dOffset)),
-            AscendC::Te::MakeShape(validN, validD));
+        const int64_t validN = asc::te::get_total_row_shape(vTensor.layout());
+        return vTensor.slice(
+            asc::te::make_coord(static_cast<int64_t>(0), static_cast<int64_t>(dOffset)),
+            asc::te::make_shape(validN, validD));
     }
 
     template <typename VTensor>
@@ -178,9 +178,9 @@ private:
     template <typename Tensor>
     __aicore__ inline static auto SliceRow(const Tensor& tensor, int64_t rowIndex, int64_t columns)
     {
-        return tensor.Slice(
-            AscendC::Te::MakeCoord(rowIndex, static_cast<int64_t>(0)),
-            AscendC::Te::MakeShape(static_cast<int64_t>(1), columns));
+        return tensor.slice(
+            asc::te::make_coord(rowIndex, static_cast<int64_t>(0)),
+            asc::te::make_shape(static_cast<int64_t>(1), columns));
     }
 
     // --------------------- RMS and softmax finalization ---------------------
@@ -189,17 +189,17 @@ private:
         const DotTensor& dotTensor, const EWorkspaceTensor& eWorkspaceTensor, const MaxTensor& maxTensor,
         const SumTensor& sumTensor)
     {
-        const int64_t validSRows = AscendC::Te::GetTotalRowShape(dotTensor.Layout());
-        const int64_t validN = AscendC::Te::GetTotalColumnShape(dotTensor.Layout());
-        const int64_t nAlign = AscendC::Te::GetTotalColumnShape(eWorkspaceTensor.Layout());
+        const int64_t validSRows = asc::te::get_total_row_shape(dotTensor.layout());
+        const int64_t validN = asc::te::get_total_column_shape(dotTensor.layout());
+        const int64_t nAlign = asc::te::get_total_column_shape(eWorkspaceTensor.layout());
         if (validSRows == 0) {
             return;
         }
         auto dotUbTensor = MakeUbTensor<ElementType>(dotUbOffset_, validSRows, validN, nAlign);
-        auto copyGmToUb = AscendC::Te::MakeCopy(AscendC::Te::CopyGM2UB{});
+        auto copyGmToUb = asc::te::make_copy(asc::te::copy_gm_to_ub{});
         // dot/max/sum share UB storage across tokens. Do not overwrite it until the previous UB2GM completes.
-        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(DEFAULT_EVENT_ID);
-        AscendC::Te::Copy(copyGmToUb, dotUbTensor, dotTensor);
+        asc_sync_wait(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(DEFAULT_EVENT_ID));
+        asc::te::copy(copyGmToUb, dotUbTensor, dotTensor);
         WaitMte2ToVector(DEFAULT_EVENT_ID);
         auto sumSquareTensor = MakeUbTensor<ElementType>(reduceUbOffset_, 1, validN, validN);
         auto maxUbTensor = MakeUbTensor<ElementType>(softmaxUbOffset_, validSRows, 1, 1);
@@ -214,11 +214,11 @@ private:
         }
         WaitVectorToMte3(DEFAULT_EVENT_ID);
         auto eUbTensor = MakeUbTensor<ElementType>(dotUbOffset_, validSRows, nAlign, nAlign);
-        auto copyUbToGm = AscendC::Te::MakeCopy(AscendC::Te::CopyUB2GM{});
-        AscendC::Te::Copy(copyUbToGm, eWorkspaceTensor, eUbTensor);
-        AscendC::Te::Copy(copyUbToGm, maxTensor, maxUbTensor);
-        AscendC::Te::Copy(copyUbToGm, sumTensor, sumUbTensor);
-        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(DEFAULT_EVENT_ID);
+        auto copyUbToGm = asc::te::make_copy(asc::te::copy_ub_to_gm{});
+        asc::te::copy(copyUbToGm, eWorkspaceTensor, eUbTensor);
+        asc::te::copy(copyUbToGm, maxTensor, maxUbTensor);
+        asc::te::copy(copyUbToGm, sumTensor, sumUbTensor);
+        asc_sync_notify(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(DEFAULT_EVENT_ID));
     }
 
     // --------------------------- Empty-input stage ---------------------------
@@ -227,19 +227,19 @@ private:
         const OutputTensor& outputTensor, const MaxTensor& maxTensor, const SumTensor& sumTensor)
     {
         constexpr uint64_t OUTPUT_BYTE_OFFSET = 0U;
-        const int64_t validS = AscendC::Te::GetTotalRowShape(outputTensor.Layout());
-        const uint64_t totalD = AscendC::Te::GetTotalColumnShape(outputTensor.Layout());
+        const int64_t validS = asc::te::get_total_row_shape(outputTensor.layout());
+        const uint64_t totalD = asc::te::get_total_column_shape(outputTensor.layout());
         auto maxUbTensor = MakeUbTensor<ElementType>(softmaxUbOffset_, 1, 1, 1);
         auto sumUbTensor = MakeUbTensor<ElementType>(
             softmaxUbOffset_ + static_cast<uint64_t>(params_->sAlign) * sizeof(ElementType), 1, 1, 1);
-        auto copyUbToGm = AscendC::Te::MakeCopy(AscendC::Te::CopyUB2GM{});
+        auto copyUbToGm = asc::te::make_copy(asc::te::copy_ub_to_gm{});
         for (uint16_t sIndex = 0U; sIndex < static_cast<uint16_t>(validS); ++sIndex) {
             BlockAttnResPrepareMix::Epilogue::Tile::InitializeEmptySoftmax::Run(maxUbTensor, sumUbTensor);
             WaitVectorToMte3(DEFAULT_EVENT_ID);
             auto maxRowTensor = SliceRow(maxTensor, static_cast<int64_t>(sIndex), 1);
             auto sumRowTensor = SliceRow(sumTensor, static_cast<int64_t>(sIndex), 1);
-            AscendC::Te::Copy(copyUbToGm, maxRowTensor, maxUbTensor);
-            AscendC::Te::Copy(copyUbToGm, sumRowTensor, sumUbTensor);
+            asc::te::copy(copyUbToGm, maxRowTensor, maxUbTensor);
+            asc::te::copy(copyUbToGm, sumRowTensor, sumUbTensor);
             WaitMte3ToVector(DEFAULT_EVENT_ID);
             for (uint32_t dTileIdx = 0U; dTileIdx < params_->dTileNum; ++dTileIdx) {
                 const uint64_t dOffset = static_cast<uint64_t>(dTileIdx) * params_->baseD;
@@ -248,10 +248,10 @@ private:
                 auto outputUbTensor = MakeUbTensor<ElementType>(OUTPUT_BYTE_OFFSET, 1, validD, params_->baseDAlign);
                 Tile::FillUb<ElementType>::FillWithValue(outputUbTensor, 0.0F);
                 WaitVectorToMte3(DEFAULT_EVENT_ID);
-                auto outputTile = outputTensor.Slice(
-                    AscendC::Te::MakeCoord(static_cast<int64_t>(sIndex), static_cast<int64_t>(dOffset)),
-                    AscendC::Te::MakeShape(static_cast<int64_t>(1), validD));
-                AscendC::Te::Copy(copyUbToGm, outputTile, outputUbTensor);
+                auto outputTile = outputTensor.slice(
+                    asc::te::make_coord(static_cast<int64_t>(sIndex), static_cast<int64_t>(dOffset)),
+                    asc::te::make_shape(static_cast<int64_t>(1), validD));
+                asc::te::copy(copyUbToGm, outputTile, outputUbTensor);
                 WaitMte3ToVector(DEFAULT_EVENT_ID);
             }
         }
@@ -266,40 +266,40 @@ private:
 
     __aicore__ inline static void WaitMte2ToVector(uint8_t eventId)
     {
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventId);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventId);
+        asc_sync_notify(PIPE_MTE2, PIPE_V, static_cast<event_t>(eventId));
+        asc_sync_wait(PIPE_MTE2, PIPE_V, static_cast<event_t>(eventId));
     }
 
     __aicore__ inline static void WaitVectorToMte2(uint8_t eventId)
     {
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(eventId);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(eventId);
+        asc_sync_notify(PIPE_V, PIPE_MTE2, static_cast<event_t>(eventId));
+        asc_sync_wait(PIPE_V, PIPE_MTE2, static_cast<event_t>(eventId));
     }
 
     __aicore__ inline static void WaitVectorToMte3(uint8_t eventId)
     {
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(eventId);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(eventId);
+        asc_sync_notify(PIPE_V, PIPE_MTE3, static_cast<event_t>(eventId));
+        asc_sync_wait(PIPE_V, PIPE_MTE3, static_cast<event_t>(eventId));
     }
 
     __aicore__ inline static void WaitMte3ToVector(uint8_t eventId)
     {
-        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(eventId);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(eventId);
+        asc_sync_notify(PIPE_MTE3, PIPE_V, static_cast<event_t>(eventId));
+        asc_sync_wait(PIPE_MTE3, PIPE_V, static_cast<event_t>(eventId));
     }
 
     template <typename T>
     __aicore__ inline static auto MakeUbTensor(uint64_t byteOffset, int64_t rows, int64_t columns, int64_t rowPitch)
     {
-        auto shape = AscendC::Te::MakeShape(
-            AscendC::Te::MakeShape(AscendC::Std::Int<1>{}, rows),
-            AscendC::Te::MakeShape(AscendC::Std::Int<1>{}, columns));
-        auto stride = AscendC::Te::MakeStride(
-            AscendC::Te::MakeStride(AscendC::Std::Int<0>{}, rowPitch),
-            AscendC::Te::MakeStride(AscendC::Std::Int<0>{}, AscendC::Std::Int<1>{}));
-        auto layout = AscendC::Te::MakePatternLayout<AscendC::Te::NDExtLayoutPtn, AscendC::Te::LayoutTraitDefault<T>>(
+        auto shape = asc::te::make_shape(
+            asc::te::make_shape(AscendC::Std::Int<1>{}, rows),
+            asc::te::make_shape(AscendC::Std::Int<1>{}, columns));
+        auto stride = asc::te::make_stride(
+            asc::te::make_stride(AscendC::Std::Int<0>{}, rowPitch),
+            asc::te::make_stride(AscendC::Std::Int<0>{}, AscendC::Std::Int<1>{}));
+        auto layout = asc::te::make_pattern_layout<asc::te::nd_ext_layout_ptn, asc::te::layout_trait_default<T>>(
             shape, stride);
-        return AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, T>(byteOffset), layout);
+        return asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::ub, T>(byteOffset), layout);
     }
 
     const Params* __restrict params_{nullptr};

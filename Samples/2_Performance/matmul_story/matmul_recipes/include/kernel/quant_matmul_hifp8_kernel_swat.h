@@ -171,12 +171,12 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Proces
 
     const bool isPerChannel = static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode) == QuantBatchMatmul::QuantMode::PERCHANNEL_MODE;
 
-    auto gmAFull = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ AType*>(aBatch)), layoutA);
-    auto gmBFull = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ BType*>(bBatch)), layoutB);
-    auto gmCFull = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ CType*>(cBatch)), layoutC);
+    auto gmAFull = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ AType*>(aBatch)), layoutA);
+    auto gmBFull = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ BType*>(bBatch)), layoutB);
+    auto gmCFull = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ CType*>(cBatch)), layoutC);
 
     while (bs.GetTileIdx(blockIdx)) {
         BlockShape singleShape = bs.GetBlockShape(blockIdx);
@@ -190,18 +190,18 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Proces
         const int64_t curN = AscendC::Std::get<MNK_N>(singleShape);
         
         auto gmBlockA = 
-            gmAFull.Slice(AscendC::Te::MakeCoord(mPos, kPos), AscendC::Te::MakeShape(curM, k));
+            gmAFull.slice(asc::te::make_coord(mPos, kPos), asc::te::make_shape(curM, k));
         auto gmBlockB = 
-            gmBFull.Slice(AscendC::Te::MakeCoord(kPos, nPos), AscendC::Te::MakeShape(k, curN));
+            gmBFull.slice(asc::te::make_coord(kPos, nPos), asc::te::make_shape(k, curN));
         auto gmBlockC = 
-            gmCFull.Slice(AscendC::Te::MakeCoord(mPos, nPos), AscendC::Te::MakeShape(curM, curN));
+            gmCFull.slice(asc::te::make_coord(mPos, nPos), asc::te::make_shape(curM, curN));
 
         if (isPerChannel) {
-            auto layoutX2 = AscendC::Te::MakeFrameLayout<AscendC::Te::NDExtLayoutPtn, AscendC::Te::LayoutTraitDefault<X2ScaleType>>(1, n);
-            auto gmX2Full = AscendC::Te::MakeTensor(
-                AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ X2ScaleType*>(x2ScaleGmBase_)),
+            auto layoutX2 = asc::te::make_frame_layout<asc::te::nd_ext_layout_ptn, asc::te::layout_trait_default<X2ScaleType>>(1, n);
+            auto gmX2Full = asc::te::make_tensor(
+                asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ X2ScaleType*>(x2ScaleGmBase_)),
                 layoutX2);
-            auto gmBlockX2 = gmX2Full.Slice(AscendC::Te::MakeCoord(0, nPos), AscendC::Te::MakeShape(1, curN));
+            auto gmBlockX2 = gmX2Full.slice(asc::te::make_coord(0, nPos), asc::te::make_shape(1, curN));
             mmadOp_(gmBlockA, gmBlockB, gmBlockX2, gmBlockC, singleShape);
         } else {
             mmadOp_(gmBlockA, gmBlockB, scaleScalar_, gmBlockC, singleShape);

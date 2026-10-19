@@ -12,7 +12,7 @@
 | `quant_matmul_hifp8_tc` | **按通道缩放**（tiling：`x1`=`KERNEL_QUANT_DEFAULT` / None，`x2`=`KERNEL_QUANT_PERCHANNEL`）：磁盘 `scale.bin` 为长度 **N** 的 **FP32（per-channel）**；宿主把每个标度转为 **uint64**（低 32b 为 DEQ 对齐后的 FP32 位型，`0xFFFFE000`；并 **`(uint64)1<<46`** 元数据位）再 H2D，与 golden 一致 |
 | `quant_matmul_hifp8_kc` | **per-token + per-channel 缩放**（MIX 架构单 launch，tiling 仅描述算子语义）：磁盘 `pertoken_scale.bin`（长度 **M**）+ `scale.bin`（长度 **N**，FP32，直接以 float 上传） |
 
-KC 为 **MIX 架构**：`__mix__(1,2)` 单 kernel，AIC 算 A@B 后 fixpipe（`CopyL0C2UB` + `DUAL_DST_SPLIT_M`）把 fp32 结果按 M 对半直写两个 AIV 的 UB（不经 GM，NoQuant），AIV epilogue 读 UB fp32 → ×perchannel → ×pertoken → bf16 写 GM，`CrossCoreSetFlag/WaitFlag` 逐 tile 握手。不依赖 blaze 高层库，仅用 kernel_operator.h + tensor_api。
+KC 为 **MIX 架构**：`__mix__(1,2)` 单 kernel，AIC 算 A@B 后 fixpipe（`copy_l0c_to_ub` + `dual_dst_mode::split_m`）把 fp32 结果按 M 对半直写两个 AIV 的 UB（不经 GM，NoQuant），AIV epilogue 读 UB fp32 → ×perchannel → ×pertoken → bf16 写 GM，`CrossCoreSetFlag/WaitFlag` 逐 tile 握手。不依赖 blaze 高层库，仅用 kernel_operator.h + tensor_api。
 
 ## 目录与脚本
 

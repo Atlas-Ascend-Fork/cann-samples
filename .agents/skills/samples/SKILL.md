@@ -30,7 +30,7 @@ git clone https://gitcode.com/cann/cann-samples.git
 | 允许的改动范围 | 待填写 | 仅当前实现内优化，还是允许 MemBase→VF、SIMD→SIMT、CV 融合、数据格式/算法变换；以用户范围为准 |
 | 算子与阶段语义 | 待填写 | elementwise、broadcast、reduce、matmul/grouped matmul、Attention、Gather/Scatter、MoE 路由/通信；重复索引覆盖或规约 |
 | 数据规格与精度 | 待填写 | shape/动态维、stride、ND/DN/NZ、输入/输出/累加 dtype、尾块、量化 scale、精度要求 |
-| 已用接口与数据流 | 待填写 | `DataCopy/LoadData/Fixpipe/Te::Copy`、`Reg/MicroAPI`、`asc_*`；GM/L1/L0/UB 路径、tile/buffer 容量及复用 |
+| 已用接口与数据流 | 待填写 | `DataCopy/LoadData/Fixpipe/asc::te::copy`、`Reg/MicroAPI`、`asc_*`；GM/L1/L0/UB 路径、tile/buffer 容量及复用 |
 | 调度与同步 | 待填写 | 分核/线程、尾轮、`TQue/Mutex/Flag/LocalMemBar/asc_vf_call`、跨核交接和 buffer 生命周期 |
 | 瓶颈与证据 | 待填写 | Scalar/Vector/Cube/MTE/Fixpipe、缓存、spill、长尾；注明 kernel、VF 或端到端口径，无证据写未知 |
 

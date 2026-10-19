@@ -24,24 +24,24 @@ public:
     template <typename MaxTensor, typename SumTensor>
     __aicore__ inline static void Run(const MaxTensor& maxTensor, const SumTensor& sumTensor)
     {
-        using MaxElementType = AscendC::Te::GetAttributeElementType<typename MaxTensor::elementType*>;
-        using SumElementType = AscendC::Te::GetAttributeElementType<typename SumTensor::elementType*>;
-        using MaxLayoutPattern = AscendC::Te::GetLayoutPattern<typename MaxTensor::layoutType>;
-        using SumLayoutPattern = AscendC::Te::GetLayoutPattern<typename SumTensor::layoutType>;
+        using MaxElementType = asc::te::get_attribute_element_type<typename MaxTensor::element_type*>;
+        using SumElementType = asc::te::get_attribute_element_type<typename SumTensor::element_type*>;
+        using MaxLayoutPattern = asc::te::get_layout_pattern<typename MaxTensor::layout_type>;
+        using SumLayoutPattern = asc::te::get_layout_pattern<typename SumTensor::layout_type>;
         static_assert(
             AscendC::Std::is_same_v<MaxElementType, float> && AscendC::Std::is_same_v<SumElementType, float>,
             "InitializeEmptySoftmax only supports FP32 tensors.");
         static_assert(
-            AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<MaxTensor>, AscendC::Te::Location::UB> &&
-                AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<SumTensor>, AscendC::Te::Location::UB>,
+            AscendC::Std::is_same_v<asc::te::get_mem_location<MaxTensor>, asc::te::location::ub> &&
+                AscendC::Std::is_same_v<asc::te::get_mem_location<SumTensor>, asc::te::location::ub>,
             "InitializeEmptySoftmax only supports UB tensors.");
         static_assert(
-            AscendC::Std::is_same_v<MaxLayoutPattern, AscendC::Te::NDExtLayoutPtn> &&
-                AscendC::Std::is_same_v<SumLayoutPattern, AscendC::Te::NDExtLayoutPtn>,
+            AscendC::Std::is_same_v<MaxLayoutPattern, asc::te::nd_ext_layout_ptn> &&
+                AscendC::Std::is_same_v<SumLayoutPattern, asc::te::nd_ext_layout_ptn>,
             "InitializeEmptySoftmax requires NDExt tensor layouts.");
 
-        auto maxAddr = reinterpret_cast<__ubuf__ float*>(maxTensor.Data().Get());
-        auto sumAddr = reinterpret_cast<__ubuf__ float*>(sumTensor.Data().Get());
+        auto maxAddr = reinterpret_cast<__ubuf__ float*>(maxTensor.data().get());
+        auto sumAddr = reinterpret_cast<__ubuf__ float*>(sumTensor.data().get());
         asc_vf_call<InitializeEmptySoftmaxVf>(maxAddr, sumAddr);
     }
 
@@ -71,29 +71,29 @@ public:
     template <typename InputTensor, typename SumSquareTensor>
     __aicore__ inline static void Run(const InputTensor& inputTensor, const SumSquareTensor& sumSquareTensor)
     {
-        using InputElementType = AscendC::Te::GetAttributeElementType<typename InputTensor::elementType*>;
-        using SumSquareElementType = AscendC::Te::GetAttributeElementType<typename SumSquareTensor::elementType*>;
-        using InputLayoutPattern = AscendC::Te::GetLayoutPattern<typename InputTensor::layoutType>;
-        using SumSquareLayoutPattern = AscendC::Te::GetLayoutPattern<typename SumSquareTensor::layoutType>;
+        using InputElementType = asc::te::get_attribute_element_type<typename InputTensor::element_type*>;
+        using SumSquareElementType = asc::te::get_attribute_element_type<typename SumSquareTensor::element_type*>;
+        using InputLayoutPattern = asc::te::get_layout_pattern<typename InputTensor::layout_type>;
+        using SumSquareLayoutPattern = asc::te::get_layout_pattern<typename SumSquareTensor::layout_type>;
         static_assert(
             AscendC::Std::is_same_v<InputElementType, float> && AscendC::Std::is_same_v<SumSquareElementType, float>,
             "ReduceSquare only supports FP32 tensors.");
         static_assert(
-            AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<InputTensor>, AscendC::Te::Location::UB> &&
-                AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<SumSquareTensor>, AscendC::Te::Location::UB>,
+            AscendC::Std::is_same_v<asc::te::get_mem_location<InputTensor>, asc::te::location::ub> &&
+                AscendC::Std::is_same_v<asc::te::get_mem_location<SumSquareTensor>, asc::te::location::ub>,
             "ReduceSquare only supports UB tensors.");
         static_assert(
-            AscendC::Std::is_same_v<InputLayoutPattern, AscendC::Te::NDExtLayoutPtn> &&
-                AscendC::Std::is_same_v<SumSquareLayoutPattern, AscendC::Te::NDExtLayoutPtn>,
+            AscendC::Std::is_same_v<InputLayoutPattern, asc::te::nd_ext_layout_ptn> &&
+                AscendC::Std::is_same_v<SumSquareLayoutPattern, asc::te::nd_ext_layout_ptn>,
             "ReduceSquare requires NDExt tensor layouts.");
 
-        const uint32_t rowCount = static_cast<uint32_t>(AscendC::Te::GetTotalRowShape(inputTensor.Layout()));
-        const uint32_t validElements = static_cast<uint32_t>(AscendC::Te::GetTotalColumnShape(inputTensor.Layout()));
+        const uint32_t rowCount = static_cast<uint32_t>(asc::te::get_total_row_shape(inputTensor.layout()));
+        const uint32_t validElements = static_cast<uint32_t>(asc::te::get_total_column_shape(inputTensor.layout()));
         const uint32_t rowPitch =
-            static_cast<uint32_t>(AscendC::Te::Get<1>(AscendC::Te::Get<0>(inputTensor.Layout().Stride())));
+            static_cast<uint32_t>(asc::te::get<1>(asc::te::get<0>(inputTensor.layout().stride())));
         const uint16_t loopCount = static_cast<uint16_t>((validElements + FP32_REG_ELEMS - 1U) / FP32_REG_ELEMS);
-        auto inputAddr = reinterpret_cast<__ubuf__ float*>(inputTensor.Data().Get());
-        auto sumSquareAddr = reinterpret_cast<__ubuf__ float*>(sumSquareTensor.Data().Get());
+        auto inputAddr = reinterpret_cast<__ubuf__ float*>(inputTensor.data().get());
+        auto sumSquareAddr = reinterpret_cast<__ubuf__ float*>(sumSquareTensor.data().get());
         RunRows(inputAddr, sumSquareAddr, rowCount, validElements, loopCount, rowPitch);
     }
 
@@ -157,38 +157,38 @@ public:
         const SumSquareTensor& sumSquareTensor, const DotTensor& dotTensor, const MaxTensor& maxTensor,
         const SumTensor& sumTensor, float reciprocalD, float epsilon)
     {
-        using SumSquareElementType = AscendC::Te::GetAttributeElementType<typename SumSquareTensor::elementType*>;
-        using DotElementType = AscendC::Te::GetAttributeElementType<typename DotTensor::elementType*>;
-        using MaxElementType = AscendC::Te::GetAttributeElementType<typename MaxTensor::elementType*>;
-        using SumElementType = AscendC::Te::GetAttributeElementType<typename SumTensor::elementType*>;
-        using SumSquareLayoutPattern = AscendC::Te::GetLayoutPattern<typename SumSquareTensor::layoutType>;
-        using DotLayoutPattern = AscendC::Te::GetLayoutPattern<typename DotTensor::layoutType>;
-        using MaxLayoutPattern = AscendC::Te::GetLayoutPattern<typename MaxTensor::layoutType>;
-        using SumLayoutPattern = AscendC::Te::GetLayoutPattern<typename SumTensor::layoutType>;
+        using SumSquareElementType = asc::te::get_attribute_element_type<typename SumSquareTensor::element_type*>;
+        using DotElementType = asc::te::get_attribute_element_type<typename DotTensor::element_type*>;
+        using MaxElementType = asc::te::get_attribute_element_type<typename MaxTensor::element_type*>;
+        using SumElementType = asc::te::get_attribute_element_type<typename SumTensor::element_type*>;
+        using SumSquareLayoutPattern = asc::te::get_layout_pattern<typename SumSquareTensor::layout_type>;
+        using DotLayoutPattern = asc::te::get_layout_pattern<typename DotTensor::layout_type>;
+        using MaxLayoutPattern = asc::te::get_layout_pattern<typename MaxTensor::layout_type>;
+        using SumLayoutPattern = asc::te::get_layout_pattern<typename SumTensor::layout_type>;
         static_assert(
             AscendC::Std::is_same_v<SumSquareElementType, float> && AscendC::Std::is_same_v<DotElementType, float> &&
                 AscendC::Std::is_same_v<MaxElementType, float> && AscendC::Std::is_same_v<SumElementType, float>,
             "RmsSoftmax only supports FP32 tensors.");
         static_assert(
-            AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<SumSquareTensor>, AscendC::Te::Location::UB> &&
-                AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<DotTensor>, AscendC::Te::Location::UB> &&
-                AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<MaxTensor>, AscendC::Te::Location::UB> &&
-                AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<SumTensor>, AscendC::Te::Location::UB>,
+            AscendC::Std::is_same_v<asc::te::get_mem_location<SumSquareTensor>, asc::te::location::ub> &&
+                AscendC::Std::is_same_v<asc::te::get_mem_location<DotTensor>, asc::te::location::ub> &&
+                AscendC::Std::is_same_v<asc::te::get_mem_location<MaxTensor>, asc::te::location::ub> &&
+                AscendC::Std::is_same_v<asc::te::get_mem_location<SumTensor>, asc::te::location::ub>,
             "RmsSoftmax only supports UB tensors.");
         static_assert(
-            AscendC::Std::is_same_v<SumSquareLayoutPattern, AscendC::Te::NDExtLayoutPtn> &&
-                AscendC::Std::is_same_v<DotLayoutPattern, AscendC::Te::NDExtLayoutPtn> &&
-                AscendC::Std::is_same_v<MaxLayoutPattern, AscendC::Te::NDExtLayoutPtn> &&
-                AscendC::Std::is_same_v<SumLayoutPattern, AscendC::Te::NDExtLayoutPtn>,
+            AscendC::Std::is_same_v<SumSquareLayoutPattern, asc::te::nd_ext_layout_ptn> &&
+                AscendC::Std::is_same_v<DotLayoutPattern, asc::te::nd_ext_layout_ptn> &&
+                AscendC::Std::is_same_v<MaxLayoutPattern, asc::te::nd_ext_layout_ptn> &&
+                AscendC::Std::is_same_v<SumLayoutPattern, asc::te::nd_ext_layout_ptn>,
             "RmsSoftmax requires NDExt tensor layouts.");
 
-        const uint32_t validN = static_cast<uint32_t>(AscendC::Te::GetTotalColumnShape(dotTensor.Layout()));
+        const uint32_t validN = static_cast<uint32_t>(asc::te::get_total_column_shape(dotTensor.layout()));
         const uint32_t nAlign =
-            static_cast<uint32_t>(AscendC::Te::Get<1>(AscendC::Te::Get<0>(dotTensor.Layout().Stride())));
-        auto sumSquareAddr = reinterpret_cast<__ubuf__ float*>(sumSquareTensor.Data().Get());
-        auto dotAddr = reinterpret_cast<__ubuf__ float*>(dotTensor.Data().Get());
-        auto maxAddr = reinterpret_cast<__ubuf__ float*>(maxTensor.Data().Get());
-        auto sumAddr = reinterpret_cast<__ubuf__ float*>(sumTensor.Data().Get());
+            static_cast<uint32_t>(asc::te::get<1>(asc::te::get<0>(dotTensor.layout().stride())));
+        auto sumSquareAddr = reinterpret_cast<__ubuf__ float*>(sumSquareTensor.data().get());
+        auto dotAddr = reinterpret_cast<__ubuf__ float*>(dotTensor.data().get());
+        auto maxAddr = reinterpret_cast<__ubuf__ float*>(maxTensor.data().get());
+        auto sumAddr = reinterpret_cast<__ubuf__ float*>(sumTensor.data().get());
         asc_vf_call<RmsSoftmaxVf>(sumSquareAddr, dotAddr, maxAddr, sumAddr, validN, nAlign, reciprocalD, epsilon);
     }
 
@@ -248,20 +248,20 @@ public:
     template <typename Tensor>
     __aicore__ inline static void FillWithValue(const Tensor& dstTensor, T fillValue)
     {
-        using TensorElementType = AscendC::Te::GetAttributeElementType<typename Tensor::elementType*>;
-        using LayoutPattern = AscendC::Te::GetLayoutPattern<typename Tensor::layoutType>;
+        using TensorElementType = asc::te::get_attribute_element_type<typename Tensor::element_type*>;
+        using LayoutPattern = asc::te::get_layout_pattern<typename Tensor::layout_type>;
         static_assert(
             AscendC::Std::is_same_v<TensorElementType, T>,
             "FillUb requires the tensor element type to match the fill value type");
         static_assert(
-            AscendC::Std::is_same_v<AscendC::Te::GetMemLocation<Tensor>, AscendC::Te::Location::UB>,
+            AscendC::Std::is_same_v<asc::te::get_mem_location<Tensor>, asc::te::location::ub>,
             "FillUb only supports UB tensors");
         static_assert(
-            AscendC::Std::is_same_v<LayoutPattern, AscendC::Te::NDExtLayoutPtn>,
+            AscendC::Std::is_same_v<LayoutPattern, asc::te::nd_ext_layout_ptn>,
             "FillUb requires a contiguous NDExt UB tensor");
 
-        auto rowCount = static_cast<uint64_t>(AscendC::Te::GetTotalRowShape(dstTensor.Layout()));
-        auto columnCount = static_cast<uint64_t>(AscendC::Te::GetTotalColumnShape(dstTensor.Layout()));
+        auto rowCount = static_cast<uint64_t>(asc::te::get_total_row_shape(dstTensor.layout()));
+        auto columnCount = static_cast<uint64_t>(asc::te::get_total_column_shape(dstTensor.layout()));
         auto elementCount = rowCount * columnCount;
         if (elementCount == 0) {
             return;
@@ -271,7 +271,7 @@ public:
         auto repeatTimes =
             (elementCount + static_cast<uint64_t>(elementsPerRepeat) - 1U) / static_cast<uint64_t>(elementsPerRepeat);
         asc_vf_call<FillWithValueVf>(
-            (__ubuf__ T*)dstTensor.Data().Get(), fillValue, static_cast<uint32_t>(elementCount),
+            (__ubuf__ T*)dstTensor.data().get(), fillValue, static_cast<uint32_t>(elementCount),
             static_cast<uint16_t>(repeatTimes));
     }
 

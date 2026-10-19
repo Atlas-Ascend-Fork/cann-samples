@@ -51,7 +51,7 @@ private:
     int32_t mBaseTail_;
     int32_t nBaseTail_;
     uint32_t blockNum_ = AscendC::GetBlockNum();
-    uint32_t blockIdx_ = AscendC::GetBlockIdx() / AscendC::GetTaskRatio();
+    uint32_t blockIdx_ = asc_get_block_idx() / AscendC::GetTaskRatio();
     uint32_t startBlockIdx_;
     uint32_t endBlockIdx_{blockNum_ - 1};
 
@@ -66,10 +66,10 @@ public:
 
     __aicore__ inline void UpdateNextProblem(const TupleShape& problemShape)
     {
-        k_ = AscendC::Te::Get<MNK_K>(problemShape);
-        if (m_ != AscendC::Te::Get<MNK_M>(problemShape) || n_ != AscendC::Te::Get<MNK_N>(problemShape)) {
-            m_ = AscendC::Te::Get<MNK_M>(problemShape);
-            n_ = AscendC::Te::Get<MNK_N>(problemShape);
+        k_ = asc::te::get<MNK_K>(problemShape);
+        if (m_ != asc::te::get<MNK_M>(problemShape) || n_ != asc::te::get<MNK_N>(problemShape)) {
+            m_ = asc::te::get<MNK_M>(problemShape);
+            n_ = asc::te::get<MNK_N>(problemShape);
             mCnt_ = CeilDiv(m_, baseM_);
             nCnt_ = CeilDiv(n_, baseN_);
             mBaseTail_ = m_ - (mCnt_ - 1) * baseM_;
@@ -190,7 +190,7 @@ public:
         }
 
         if (rowIdx & 1) {
-            AscendC::Std::get<MNK_N>(blockCoord) = nCnt_ - 1 - AscendC::Te::Get<MNK_N>(blockCoord);
+            AscendC::Std::get<MNK_N>(blockCoord) = nCnt_ - 1 - asc::te::get<MNK_N>(blockCoord);
         }
         roundIdx_++;
         return true;
@@ -198,8 +198,8 @@ public:
 
     __aicore__ inline BlockShape GetBlockShape(const BlockCoord& blockCoord)
     {
-        int64_t singleCoreM = AscendC::Te::Get<MNK_M>(blockCoord) != (mCnt_ - 1) ? baseM_ : mBaseTail_;
-        int64_t singleCoreN = AscendC::Te::Get<MNK_N>(blockCoord) != (nCnt_ - 1) ? baseN_ : nBaseTail_;
+        int64_t singleCoreM = asc::te::get<MNK_M>(blockCoord) != (mCnt_ - 1) ? baseM_ : mBaseTail_;
+        int64_t singleCoreN = asc::te::get<MNK_N>(blockCoord) != (nCnt_ - 1) ? baseN_ : nBaseTail_;
         if (tailCnt_ == 1 || roundIdx_ < round_) { // roundIdx++ in GetTileIdx
             return {singleCoreM, singleCoreN, 0, 0};
         }

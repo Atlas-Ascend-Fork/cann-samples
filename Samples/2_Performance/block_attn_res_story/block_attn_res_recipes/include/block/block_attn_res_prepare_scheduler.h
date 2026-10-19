@@ -25,8 +25,8 @@ template <class ProblemShape_>
 class BlockSchedulerBlockAttnResPrepare {
 public:
     using ProblemShape = ProblemShape_;
-    using BlockShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
-    using BlockCoord = AscendC::Te::Coord<int64_t, int64_t, int64_t, int64_t>;
+    using BlockShape = asc::te::shape<int64_t, int64_t, int64_t, int64_t>;
+    using BlockCoord = asc::te::coord<int64_t, int64_t, int64_t, int64_t>;
 
     struct BlockInfo {
         BlockShape blockShape{};
@@ -49,9 +49,9 @@ public:
 
     __aicore__ inline BlockSchedulerBlockAttnResPrepare(
         const ProblemShape& problemShape, const Params& params, uint32_t validN, uint32_t coreIndex)
-        : totalS_(static_cast<uint64_t>(AscendC::Te::Get<S_DIM_INDEX>(problemShape))),
-          totalD_(static_cast<uint64_t>(AscendC::Te::Get<D_DIM_INDEX>(problemShape))),
-          totalT_(static_cast<uint64_t>(AscendC::Te::Get<T_DIM_INDEX>(problemShape))),
+        : totalS_(static_cast<uint64_t>(asc::te::get<S_DIM_INDEX>(problemShape))),
+          totalD_(static_cast<uint64_t>(asc::te::get<D_DIM_INDEX>(problemShape))),
+          totalT_(static_cast<uint64_t>(asc::te::get<T_DIM_INDEX>(problemShape))),
           validN_(validN),
           totalBlockNums_(params.totalWorkUnits),
           usedCoreNum_(params.usedCoreNum),
@@ -100,7 +100,7 @@ public:
     // Split the block's S rows evenly across the AIVs belonging to the same logical task group.
     __aicore__ inline AivRowRange GetAivRowRange(const BlockShape& blockShape) const
     {
-        const uint32_t blockS = static_cast<uint32_t>(AscendC::Te::Get<S_DIM_INDEX>(blockShape));
+        const uint32_t blockS = static_cast<uint32_t>(asc::te::get<S_DIM_INDEX>(blockShape));
         // The __mix__(1, 2) entry normally supplies 2; reject an invalid runtime ratio before division.
         const uint32_t taskRatio = AscendC::GetTaskRation();
         if (taskRatio == 0U) {

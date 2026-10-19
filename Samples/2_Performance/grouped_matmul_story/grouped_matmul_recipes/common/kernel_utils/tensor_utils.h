@@ -26,11 +26,11 @@ template <typename DType>
 struct TensorMemPtrFactory<AscendC::Hardware::L1, DType> {
     __aicore__ static inline auto Make()
     {
-        return AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1>(reinterpret_cast<__cbuf__ DType*>(0));
+        return asc::te::make_mem_ptr<asc::te::location::l1>(reinterpret_cast<__cbuf__ DType*>(0));
     }
 };
 
 template <AscendC::Hardware position, typename DType, typename Layout>
 using TensorType =
-    decltype(AscendC::Te::MakeTensor(TensorMemPtrFactory<position, DType>::Make(), Layout{}(16UL, 16UL)));
+    decltype(asc::te::make_tensor(TensorMemPtrFactory<position, DType>::Make(), Layout{}(16UL, 16UL)));
 } // namespace kernel_utils

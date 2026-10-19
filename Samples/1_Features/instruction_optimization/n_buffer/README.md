@@ -43,8 +43,8 @@ constexpr static int16_t ZERO_FLAG = 0;
 ...
 
 // 流水同步事件初始化
-AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
-AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(ZERO_FLAG);
+asc_sync_notify(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(ZERO_FLAG));
+asc_sync_notify(PIPE_M, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
 
 ```
 
@@ -62,10 +62,10 @@ uint64_t l0PingPong = 0;   // L0 ping-pong缓冲区索引
 // ... 其他初始化代码
 
 // 流水同步事件初始化（包含两套事件标志）
-AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
-AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(ZERO_FLAG);
-AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(FIRST_FLAG);
-AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(FIRST_FLAG);
+asc_sync_notify(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(ZERO_FLAG));
+asc_sync_notify(PIPE_M, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
+asc_sync_notify(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(FIRST_FLAG));
+asc_sync_notify(PIPE_M, PIPE_MTE1, static_cast<event_t>(FIRST_FLAG));
 
 ```
 
@@ -79,19 +79,19 @@ AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(FIRST_FLAG);
 
 ```C++
 // 等待MTE1搬运完成，触发MTE2启动
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
+asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(ZERO_FLAG));
 
 // 将L1数据搬运到L0A/L0B
 // ... 数据搬运代码
 
 // 标记MTE2搬运完成，触发MTE1启动
-AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(ZERO_FLAG);
+asc_sync_notify(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
 
 // ... L0A/L0B搬运至MMAD并计算
 
 // 标记MTE1搬运完成，触发对应L1缓冲区的下一轮MTE2启动
-AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
+asc_sync_notify(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(ZERO_FLAG));
 
 ```
 
@@ -100,19 +100,19 @@ DB使能版本：
 ```C++
 // 根据当前L1缓冲区索引等待对应事件
 uint64_t l1BufId = l1PingPong & 1;
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
+asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(l1BufId));
 
 // 将L1数据搬运到L0A/L0B
 // ... 数据搬运代码
 
 // 标记MTE2搬运完成，触发对应L1缓冲区的MTE1启动
-AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(l1BufId);
-AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(l1BufId);
+asc_sync_notify(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(l1BufId));
+asc_sync_wait(PIPE_MTE2, PIPE_MTE1, static_cast<event_t>(l1BufId));
 
 // ... L0A/L0B搬运至MMAD并计算
 
 // 标记MTE1搬运完成，触发对应L1缓冲区的下一轮MTE2启动
-AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
+asc_sync_notify(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(l1BufId));
 l1PingPong++;
 
 ```
@@ -127,22 +127,22 @@ l1PingPong++;
 
 ```C++
 // 等待MMAD计算完成，触发MTE1启动
-AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(ZERO_FLAG);
+asc_sync_wait(PIPE_M, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
 
 // 将L0A/L0B数据送入MMAD进行计算
 // ... 数据准备代码
 
 // 标记MTE1搬运完成，触发MMAD启动
-AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(ZERO_FLAG);
+asc_sync_notify(PIPE_MTE1, PIPE_M, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_MTE1, PIPE_M, static_cast<event_t>(ZERO_FLAG));
 
 // 执行矩阵乘加计算
-AscendC::Te::Mad(
-    MmadAtom<MmadTraits<MmadOperation, MmadTraitDefault>>{},
-    tensorL0C, tensorAL0, tensorBL0, para);
+asc::te::mmad(
+    asc::te::make_mmad(asc::te::mmad_operation{}, asc::te::mmad_trait_default{}).with(para),
+    tensorL0C, tensorAL0, tensorBL0);
 
 // 标记MMAD计算完成，触发下一轮MTE1启动
-AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(ZERO_FLAG);
+asc_sync_notify(PIPE_M, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
 ```
 
 DB使能版本：
@@ -150,22 +150,22 @@ DB使能版本：
 ```C++
 // 根据当前L0缓冲区索引等待对应事件
 uint64_t l0BufId = l0PingPong & 1;
-AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(l0BufId);
+asc_sync_wait(PIPE_M, PIPE_MTE1, static_cast<event_t>(l0BufId));
 
 // 将L0A/L0B数据送入MMAD进行计算
 // ... 数据准备代码
 
 // 标记MTE1搬运完成，触发对应L0缓冲区的MMAD启动
-AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(l0BufId);
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(l0BufId);
+asc_sync_notify(PIPE_MTE1, PIPE_M, static_cast<event_t>(l0BufId));
+asc_sync_wait(PIPE_MTE1, PIPE_M, static_cast<event_t>(l0BufId));
 
 // 执行矩阵乘加计算
-AscendC::Te::Mad(
-    MmadAtom<MmadTraits<MmadOperation, MmadTraitDefault>>{},
-    tensorL0C, tensorAL0, tensorBL0, para);
+asc::te::mmad(
+    asc::te::make_mmad(asc::te::mmad_operation{}, asc::te::mmad_trait_default{}).with(para),
+    tensorL0C, tensorAL0, tensorBL0);
 
 // 标记MMAD计算完成，触发对应L0缓冲区的下一轮MTE1启动
-AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(l0BufId);
+asc_sync_notify(PIPE_M, PIPE_MTE1, static_cast<event_t>(l0BufId));
 
 l0PingPong++;  // 切换L0缓冲区
 
@@ -181,39 +181,39 @@ l0PingPong++;  // 切换L0缓冲区
 
 ```C++
 // 等待MMAD计算完成，触发fixpipe搬出数据
-AscendC::SetFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);
+asc_sync_notify(PIPE_M, PIPE_FIX, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_M, PIPE_FIX, static_cast<event_t>(ZERO_FLAG));
 
 // 将L0C结果搬回GM
-auto copyL0C2GM = AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2GM{});
-AscendC::Te::Copy(copyL0C2GM, gmBlockC_, tensorL0C);
+auto copyL0C2GM = asc::te::make_copy(asc::te::copy_l0c_to_gm{});
+asc::te::copy(copyL0C2GM, gmBlockC_, tensorL0C);
 
 // ... 循环处理
 
 // 释放尾轮多余的事件配置
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(ZERO_FLAG);
+asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_M, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
 ```
 
 DB使能版本：
 
 ```C++
 // 等待MMAD计算完成，触发fixpipe搬出数据
-AscendC::SetFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);
+asc_sync_notify(PIPE_M, PIPE_FIX, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_M, PIPE_FIX, static_cast<event_t>(ZERO_FLAG));
 
 // 将L0C结果搬回GM
-auto copyL0C2GM = AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2GM{});
-AscendC::Te::Copy(copyL0C2GM, gmBlockC_, tensorL0C);
+auto copyL0C2GM = asc::te::make_copy(asc::te::copy_l0c_to_gm{});
+asc::te::copy(copyL0C2GM, gmBlockC_, tensorL0C);
 // ... L0C缓冲区切换
 
 // ... 循环处理
 
 // 释放所有事件配置
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(ZERO_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(FIRST_FLAG);
-AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(FIRST_FLAG);
+asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_M, PIPE_MTE1, static_cast<event_t>(ZERO_FLAG));
+asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(FIRST_FLAG));
+asc_sync_wait(PIPE_M, PIPE_MTE1, static_cast<event_t>(FIRST_FLAG));
 
 ```
 

@@ -31,10 +31,10 @@ if (iter0 % scaleKL1Ratio == 0) {
     uint64_t scaleKL1Offset = iter0 * kL1;
     
     // 等待MTE1（L2->L1）数据传输完成事件
-    AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(tool::SCALE_BUFFER_FLAG_0 + scaleL1BufId);
+    asc_sync_wait(PIPE_MTE1, PIPE_MTE2, static_cast<event_t>(tool::SCALE_BUFFER_FLAG_0 + scaleL1BufId));
     
     // 创建从Global Memory到L1 Memory的拷贝操作对象
-    auto CopyScaleGM2L1 = AscendC::Te::MakeCopy(::Tile::CopyScaleGM2L1Atom{});
+    auto CopyScaleGM2L1 = asc::te::make_copy(::Tile::CopyScaleGM2L1Atom{});
     
     // 当前tile实际处理的K维长度（边界处理，避免越界）
     uint64_t curScaleKL1 = scaleKL1;
@@ -45,12 +45,12 @@ if (iter0 % scaleKL1Ratio == 0) {
     // 为A矩阵的缩放因子创建L1内存布局（按Z字型布局）
     // 维度：curM × ceil(scaleKL1 / MXFP_GROUP_SIZE)
     // 注意：这里使用MXFP_GROUP_SIZE，每个缩放因子对应一个组
-    auto layoutScaleAL1 = AscendC::Te::MakeZzLayout<fp8_e8m0_t>(
+    auto layoutScaleAL1 = asc::te::make_frame_layout<asc::te::zz_layout_ptn, AscendC::Std::Int<tool::SCALE_C0>>(
         curM, tool::CeilDiv(scaleKL1, tool::MXFP_GROUP_SIZE));
     
     // 在L1内存上创建A矩阵缩放因子的张量视图
-    auto tensorScaleAL1Buf = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeL1memPtr<fp8_e8m0_t>(l1BufferScaleAOffset[scaleL1BufId]),
+    auto tensorScaleAL1Buf = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::l1, fp8_e8m0_t>(l1BufferScaleAOffset[scaleL1BufId]),
         layoutScaleAL1);
     
     // 定义A矩阵缩放因子在Global Memory中的tile形状
@@ -58,33 +58,33 @@ if (iter0 % scaleKL1Ratio == 0) {
     // 形状：curM × [ceil(curScaleKL1 / MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE]
     // 注意：这里使用MXFP_DIVISOR_SIZE和MXFP_MULTI_BASE_SIZE进行块对齐计算
     auto tensorScaleAGmTile = ScaleAgm(
-        AscendC::Te::MakeCoord(0, scaleKL1Offset / tool::MXFP_GROUP_SIZE),
-        AscendC::Te::MakeShape(
+        asc::te::make_coord(0, scaleKL1Offset / tool::MXFP_GROUP_SIZE),
+        asc::te::make_shape(
             curM, tool::CeilDiv(curScaleKL1, tool::MXFP_DIVISOR_SIZE) * tool::MXFP_MULTI_BASE_SIZE));
     
     // 执行拷贝：将A矩阵缩放因子从Global Memory复制到L1 Memory
-    AscendC::Te::Copy(CopyScaleGM2L1, tensorScaleAL1Buf, tensorScaleAGmTile);
+    asc::te::copy(CopyScaleGM2L1, tensorScaleAL1Buf, tensorScaleAGmTile);
     
     // 为B矩阵的缩放因子创建L1内存布局（按N轴优先布局）
     // 维度：ceil(scaleKL1 / MXFP_GROUP_SIZE) × curN
-    auto layoutScaleBL1 = AscendC::Te::MakeNnLayout<fp8_e8m0_t>(
+    auto layoutScaleBL1 = asc::te::make_frame_layout<asc::te::nn_layout_ptn, AscendC::Std::Int<tool::SCALE_C0>>(
         tool::CeilDiv(scaleKL1, tool::MXFP_GROUP_SIZE), curN);
     
     // 在L1内存上创建B矩阵缩放因子的张量视图
-    auto tensorScaleBL1Buf = AscendC::Te::MakeTensor(
-        AscendC::Te::MakeL1memPtr<fp8_e8m0_t>(l1BufferScaleBOffset[scaleL1BufId]),
+    auto tensorScaleBL1Buf = asc::te::make_tensor(
+        asc::te::make_mem_ptr<asc::te::location::l1, fp8_e8m0_t>(l1BufferScaleBOffset[scaleL1BufId]),
         layoutScaleBL1);
     
     // 定义B矩阵缩放因子在Global Memory中的tile形状
     // 起始坐标：(scaleKL1Offset / MXFP_GROUP_SIZE, 0)
     // 形状：[ceil(curScaleKL1 / MXFP_DIVISOR_SIZE) * MXFP_MULTI_BASE_SIZE] × curN
     auto tensorScaleBGmTile = ScaleBgm(
-        AscendC::Te::MakeCoord(scaleKL1Offset / tool::MXFP_GROUP_SIZE, 0),
-        AscendC::Te::MakeShape(
+        asc::te::make_coord(scaleKL1Offset / tool::MXFP_GROUP_SIZE, 0),
+        asc::te::make_shape(
             tool::CeilDiv(curScaleKL1, tool::MXFP_DIVISOR_SIZE) * tool::MXFP_MULTI_BASE_SIZE, curN));
     
     // 执行拷贝：将B矩阵缩放因子从Global Memory复制到L1 Memory
-    AscendC::Te::Copy(CopyScaleGM2L1, tensorScaleBL1Buf, tensorScaleBGmTile);
+    asc::te::copy(CopyScaleGM2L1, tensorScaleBL1Buf, tensorScaleBGmTile);
 }
 ```
 

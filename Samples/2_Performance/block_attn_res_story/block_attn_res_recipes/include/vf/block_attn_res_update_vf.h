@@ -16,7 +16,7 @@
 namespace BlockAttnResUpdateOps {
 
 namespace Reg = AscendC::Reg;
-namespace Te = AscendC::Te;
+namespace Te = asc::te;
 
 constexpr uint32_t BARU_FP32_BYTES = sizeof(float);
 constexpr uint32_t BARU_BF16_BYTES = sizeof(bfloat16_t);

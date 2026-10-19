@@ -93,13 +93,13 @@ public:
         Params const& params, TupleShape blockShapeInAiv, TupleShape tileL1ShapeInAiv, BlockCoord coordInAiv,
         uint64_t usedCoreNum, bool checkIsSkScene)
     {
-        m_ = AscendC::Te::Get<MNK_M>(blockShapeInAiv);
-        n_ = AscendC::Te::Get<MNK_N>(blockShapeInAiv);
-        mL1_ = AscendC::Te::Get<MNK_M>(tileL1ShapeInAiv);
-        nL1_ = AscendC::Te::Get<MNK_N>(tileL1ShapeInAiv);
-        mCnt_ = AscendC::Te::Get<MNK_M>(coordInAiv);
-        nCnt_ = AscendC::Te::Get<MNK_N>(coordInAiv);
-        kCnt_ = AscendC::Te::Get<MNK_K>(coordInAiv);
+        m_ = asc::te::get<MNK_M>(blockShapeInAiv);
+        n_ = asc::te::get<MNK_N>(blockShapeInAiv);
+        mL1_ = asc::te::get<MNK_M>(tileL1ShapeInAiv);
+        nL1_ = asc::te::get<MNK_N>(tileL1ShapeInAiv);
+        mCnt_ = asc::te::get<MNK_M>(coordInAiv);
+        nCnt_ = asc::te::get<MNK_N>(coordInAiv);
+        kCnt_ = asc::te::get<MNK_K>(coordInAiv);
         usedCoreNum_ = usedCoreNum;
         // Decrease tile size of per vector core to prevent data race of cube and vector
         aivMte2Num_ = checkIsSkScene ? AscendC::GetTaskRatio() : AscendC::BLOCK_CUBE;

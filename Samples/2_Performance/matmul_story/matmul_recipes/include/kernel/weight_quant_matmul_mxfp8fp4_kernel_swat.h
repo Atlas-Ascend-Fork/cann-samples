@@ -42,12 +42,12 @@ struct Weight8BitUbLayout {
         int64_t k1 = CeilDiv(kSize, C0);
         int64_t n1 = CeilDiv(nSize, N0);
 
-        auto shape = AscendC::Te::MakeShape(
-            AscendC::Te::MakeShape(AscendC::Std::Int<C0>{}, k1), AscendC::Te::MakeShape(AscendC::Std::Int<N0>{}, n1));
-        auto stride = AscendC::Te::MakeStride(
-            AscendC::Te::MakeStride(AscendC::Std::Int<1>{}, n1 * AscendC::Std::Int<InnerStride>{}),
-            AscendC::Te::MakeStride(AscendC::Std::Int<C0>{}, AscendC::Std::Int<InnerStride>{}));
-        return AscendC::Te::MakeLayout(shape, stride);
+        auto shape = asc::te::make_shape(
+            asc::te::make_shape(AscendC::Std::Int<C0>{}, k1), asc::te::make_shape(AscendC::Std::Int<N0>{}, n1));
+        auto stride = asc::te::make_stride(
+            asc::te::make_stride(AscendC::Std::Int<1>{}, n1 * AscendC::Std::Int<InnerStride>{}),
+            asc::te::make_stride(AscendC::Std::Int<C0>{}, AscendC::Std::Int<InnerStride>{}));
+        return asc::te::make_layout(shape, stride);
     }
 };
 
@@ -117,9 +117,9 @@ public:
     template <typename GMWeightTensor>
     __aicore__ inline void operator()(const GMWeightTensor& gmWeightTensor)
     {
-        const auto& layout = gmWeightTensor.Layout();
-        kSize_ = static_cast<uint64_t>(AscendC::Te::GetTotalRowShape(layout));
-        nL1Len_ = static_cast<int32_t>(AscendC::Te::GetTotalColumnShape(layout));
+        const auto& layout = gmWeightTensor.layout();
+        kSize_ = static_cast<uint64_t>(asc::te::get_total_row_shape(layout));
+        nL1Len_ = static_cast<int32_t>(asc::te::get_total_column_shape(layout));
         nL1PadLen_ = AscendC::CeilAlign(static_cast<uint64_t>(nL1Len_), CUBE_BLOCK);
         uint64_t kL1PadSize = AscendC::CeilAlign(kL1Size_, MXFP_DIVISOR_SIZE);
         // Buffer stride stays fixed at baseN so AIV producer and AIC consumer use the same L1 slot base.
@@ -230,8 +230,8 @@ private:
         // MTE3 侧等 8bit-UB 写完后搬运至 L1。
         AscendC::Mutex::Lock<PIPE_MTE3>(mte3VMutex_[ubBufIdx_]);
         auto l1Tensor = MakeL1WeightTensor(l1Offset);
-        auto copyUB2L1 = AscendC::Te::MakeCopy(::Tile::CopyUB2L1Weight{});
-        AscendC::Te::Copy(copyUB2L1, l1Tensor, weight8BitTensor);
+        auto copyUB2L1 = asc::te::make_copy(::Tile::CopyUB2L1Weight{});
+        asc::te::copy(copyUB2L1, l1Tensor, weight8BitTensor);
         // UB->L1 搬运完成：MTE3 释放该 8bit 槽供 V 复用。
         AscendC::Mutex::Unlock<PIPE_MTE3>(mte3VMutex_[ubBufIdx_]);
     }
@@ -239,25 +239,25 @@ private:
     __aicore__ inline auto MakeWeight4BitTensor()
     {
         uint64_t offset = weightInBaseOffset_ + ubBufIdx_ * singleWeightInLenBytes_;
-        return AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, InType>(offset),
+        return asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::ub, InType>(offset),
             MatmulRecipe::Weight4BitNzLayout<OutType>{}(kUbLen_, nUbLen_));
     }
 
     __aicore__ inline auto MakeWeight8BitTensor()
     {
         uint64_t offset = ubBufIdx_ * VEC_MAX_ELEM_B8;
-        return AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::UB, OutType>(offset),
+        return asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::ub, OutType>(offset),
             Weight8BitUbLayout<OutType, VEC_MAX_ELEM_B8 * VECTOR_WEIGHT_BUFFER_NUM>{}(kUbLen_, nUbLen_));
     }
 
     __aicore__ inline auto MakeL1WeightTensor(int64_t l1Offset)
     {
         auto layout =
-            AscendC::Te::MakeFrameLayout<AscendC::Te::ZNLayoutPtn, AscendC::Std::Int<FP8_C0_SIZE>>(kUbLen_, nUbLen_);
-        return AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::L1, OutType>(static_cast<uint64_t>(l1Offset)), layout);
+            asc::te::make_frame_layout<asc::te::zn_layout_ptn, AscendC::Std::Int<FP8_C0_SIZE>>(kUbLen_, nUbLen_);
+        return asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::l1, OutType>(static_cast<uint64_t>(l1Offset)), layout);
     }
 
     template <typename GMWeightTensor, typename Weight4BitTensor>
@@ -267,11 +267,11 @@ private:
         if (unlikely(kUbLen_ <= 0 || nUbLen_ <= 0)) {
             return;
         }
-        auto gmSlice = gmWeightTensor.Slice(
-            AscendC::Te::MakeCoord(static_cast<int64_t>(kGmOffset_ + kL1Offset_), static_cast<int64_t>(nL1Offset_)),
-            AscendC::Te::MakeShape(static_cast<int64_t>(kUbLen_), static_cast<int64_t>(nUbLen_)));
-        auto copyGM2UB = AscendC::Te::MakeCopy(::Tile::CopyGM2UBPackedWeight{});
-        AscendC::Te::Copy(copyGM2UB, weight4BitTensor, gmSlice);
+        auto gmSlice = gmWeightTensor.slice(
+            asc::te::make_coord(static_cast<int64_t>(kGmOffset_ + kL1Offset_), static_cast<int64_t>(nL1Offset_)),
+            asc::te::make_shape(static_cast<int64_t>(kUbLen_), static_cast<int64_t>(nUbLen_)));
+        auto copyGM2UB = asc::te::make_copy(::Tile::CopyGM2UBPackedWeight{});
+        asc::te::copy(copyGM2UB, weight4BitTensor, gmSlice);
     }
 
 private:
@@ -348,8 +348,8 @@ public:
 private:
     __aicore__ inline static void RunAiv(const Params& params, const BlockScheduler& scheduler)
     {
-        auto gmWeight = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ BType*>(params.mmad.bGmAddr)),
+        auto gmWeight = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ BType*>(params.mmad.bGmAddr)),
             LayoutB{}(static_cast<int64_t>(params.problemShape.k), static_cast<int64_t>(params.problemShape.n)));
         uint64_t tileNum = scheduler.GetTileNum();
         uint64_t curBlockIdx = AscendC::GetBlockIdx() / AscendC::GetTaskRatio();
@@ -364,9 +364,9 @@ private:
             uint64_t nOffset = static_cast<uint64_t>(AscendC::Std::get<1>(blockCoord));
             uint64_t kSize = static_cast<uint64_t>(AscendC::Std::get<2>(blockShape));
             uint64_t nL1Size = static_cast<uint64_t>(AscendC::Std::get<1>(blockShape));
-            auto gmBlockWeight = gmWeight.Slice(
-                AscendC::Te::MakeCoord(0, static_cast<int64_t>(nOffset)),
-                AscendC::Te::MakeShape(static_cast<int64_t>(kSize), static_cast<int64_t>(nL1Size)));
+            auto gmBlockWeight = gmWeight.slice(
+                asc::te::make_coord(0, static_cast<int64_t>(nOffset)),
+                asc::te::make_shape(static_cast<int64_t>(kSize), static_cast<int64_t>(nL1Size)));
             blockPrologue(gmBlockWeight);
         }
     }
@@ -375,24 +375,24 @@ private:
     {
         uint64_t scaleKSize =
             CeilDiv(AscendC::CeilAlign(params.problemShape.k, TILING_MXFP_DIVISOR_SIZE), MX_GROUP_SIZE);
-        auto gmA = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ AType*>(params.mmad.aGmAddr)),
+        auto gmA = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ AType*>(params.mmad.aGmAddr)),
             LayoutA{}(static_cast<int64_t>(params.problemShape.m), static_cast<int64_t>(params.problemShape.k)));
-        auto gmScaleA = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(
+        auto gmScaleA = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(
                 reinterpret_cast<__gm__ ScaleAType*>(params.mmad.scaleAGmAddr)),
             LayoutScaleA{}(static_cast<int64_t>(params.problemShape.m), static_cast<int64_t>(scaleKSize)));
-        auto gmScaleB = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(
+        auto gmScaleB = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(
                 reinterpret_cast<__gm__ ScaleBType*>(params.mmad.scaleBGmAddr)),
             LayoutScaleB{}(static_cast<int64_t>(scaleKSize), static_cast<int64_t>(params.problemShape.n)));
-        auto gmC = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(reinterpret_cast<__gm__ CType*>(params.mmad.cGmAddr)),
+        auto gmC = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(reinterpret_cast<__gm__ CType*>(params.mmad.cGmAddr)),
             LayoutC{}(static_cast<int64_t>(params.problemShape.m), static_cast<int64_t>(params.problemShape.n)));
 
         uint64_t tileNum = scheduler.GetTileNum();
         BlockMmad blockMmad(params.mmad);
-        for (uint64_t loopIdx = AscendC::GetBlockIdx(); loopIdx < tileNum; loopIdx += AscendC::GetBlockNum()) {
+        for (uint64_t loopIdx = block_idx; loopIdx < tileNum; loopIdx += AscendC::GetBlockNum()) {
             auto blockCoord = scheduler.GetBlockCoord(loopIdx);
             auto blockShape = scheduler.GetBlockShape(blockCoord);
             uint64_t mOffset = static_cast<uint64_t>(AscendC::Std::get<0>(blockCoord));
@@ -401,18 +401,18 @@ private:
             uint64_t nL1Size = static_cast<uint64_t>(AscendC::Std::get<1>(blockShape));
             uint64_t kSize = static_cast<uint64_t>(AscendC::Std::get<2>(blockShape));
 
-            auto gmBlockA = gmA.Slice(
-                AscendC::Te::MakeCoord(static_cast<int64_t>(mOffset), 0),
-                AscendC::Te::MakeShape(static_cast<int64_t>(mL1Size), static_cast<int64_t>(kSize)));
-            auto gmBlockScaleA = gmScaleA.Slice(
-                AscendC::Te::MakeCoord(static_cast<int64_t>(mOffset), 0),
-                AscendC::Te::MakeShape(static_cast<int64_t>(mL1Size), static_cast<int64_t>(scaleKSize)));
-            auto gmBlockScaleB = gmScaleB.Slice(
-                AscendC::Te::MakeCoord(0, static_cast<int64_t>(nOffset)),
-                AscendC::Te::MakeShape(static_cast<int64_t>(scaleKSize), static_cast<int64_t>(nL1Size)));
-            auto gmBlockC = gmC.Slice(
-                AscendC::Te::MakeCoord(static_cast<int64_t>(mOffset), static_cast<int64_t>(nOffset)),
-                AscendC::Te::MakeShape(static_cast<int64_t>(mL1Size), static_cast<int64_t>(nL1Size)));
+            auto gmBlockA = gmA.slice(
+                asc::te::make_coord(static_cast<int64_t>(mOffset), 0),
+                asc::te::make_shape(static_cast<int64_t>(mL1Size), static_cast<int64_t>(kSize)));
+            auto gmBlockScaleA = gmScaleA.slice(
+                asc::te::make_coord(static_cast<int64_t>(mOffset), 0),
+                asc::te::make_shape(static_cast<int64_t>(mL1Size), static_cast<int64_t>(scaleKSize)));
+            auto gmBlockScaleB = gmScaleB.slice(
+                asc::te::make_coord(0, static_cast<int64_t>(nOffset)),
+                asc::te::make_shape(static_cast<int64_t>(scaleKSize), static_cast<int64_t>(nL1Size)));
+            auto gmBlockC = gmC.slice(
+                asc::te::make_coord(static_cast<int64_t>(mOffset), static_cast<int64_t>(nOffset)),
+                asc::te::make_shape(static_cast<int64_t>(mL1Size), static_cast<int64_t>(nL1Size)));
             blockMmad(gmBlockA, gmBlockScaleA, gmBlockScaleB, gmBlockC);
         }
     }

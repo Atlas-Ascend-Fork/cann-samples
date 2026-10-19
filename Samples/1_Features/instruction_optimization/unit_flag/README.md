@@ -34,55 +34,55 @@
 ```C++
 // 执行 M-MAD 操作
 MmadParams para;
-para.cmatrixInitVal = (iter1 == 0 && iter0 == 0);
+para.init_with_zero = (iter1 == 0 && iter0 == 0);
 para.m = actualCurM;
 para.n = actualCurN;
 para.k = curKL0;
 
-AscendC::Te::Mad(
-    MmadAtom<MmadTraits<MmadOperation, MmadTraitDefault>>{}, 
-    tensorL0C, tensorAL0, tensorBL0, para);
+asc::te::mmad(
+    asc::te::make_mmad(asc::te::mmad_operation{}, asc::te::mmad_trait_default{}).with(para),
+    tensorL0C, tensorAL0, tensorBL0);
 
 // 流水同步 MMAD计算和Fixpipe搬出指令
-AscendC::SetFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);  
-AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);  
+asc_sync_notify(PIPE_M, PIPE_FIX, static_cast<event_t>(ZERO_FLAG));  
+asc_sync_wait(PIPE_M, PIPE_FIX, static_cast<event_t>(ZERO_FLAG));  
 // 拷贝 L0c 到 GM（默认配置）
-auto copyL0C2GM = AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2GM{});
-AscendC::Te::Copy(copyL0C2GM, gmBlockC_, tensorL0C);
+auto copyL0C2GM = asc::te::make_copy(asc::te::copy_l0c_to_gm{});
+asc::te::copy(copyL0C2GM, gmBlockC_, tensorL0C);
 ```
 
 改造后
 ```C++
 // 新增：单元标志控制开关
 constexpr uint32_t UNITFLAG_DISABLE = 0; // 不开启unit_flag  
-constexpr uint32_t NO_FINAL_ACCUMULATION = 2; // 非尾轮标志
-constexpr uint32_t FINAL_ACCUMULATION = 3; // 尾轮标志
+constexpr uint32_t asc::te::unit_flag_mode::enable_keep = 2; // 非尾轮标志
+constexpr uint32_t asc::te::unit_flag_mode::enable_update = 3; // 尾轮标志
 
 // 执行 M-MAD 操作
 MmadParams para;
-para.cmatrixInitVal = (iter1 == 0 && iter0 == 0);
+para.init_with_zero = (iter1 == 0 && iter0 == 0);
 para.m = actualCurM;
 para.n = actualCurN;
 para.k = curKL0;
 
-// 关键改动1：根据迭代位置动态配置 unitFlag
+// 关键改动1：根据迭代位置动态配置 unit_flag
 if constexpr (EN_UNIT_FLAG == true) {
     if (iter1 == (kL0IterNum - 1) && iter0 == (kL1TileNum - 1)) {
-        para.unitFlag = FINAL_ACCUMULATION;
+        para.unit_flag = asc::te::unit_flag_mode::enable_update;
     } else {
-        para.unitFlag = NO_FINAL_ACCUMULATION;
+        para.unit_flag = asc::te::unit_flag_mode::enable_keep;
     }
 }
 
-AscendC::Te::Mad(
-    MmadAtom<MmadTraits<MmadOperation, MmadTraitDefault>>{}, 
-    tensorL0C, tensorAL0, tensorBL0, para);
+asc::te::mmad(
+    asc::te::make_mmad(asc::te::mmad_operation{}, asc::te::mmad_trait_default{}).with(para),
+    tensorL0C, tensorAL0, tensorBL0);
 
 // 关键改动2：删除 MMAD和Fixpipe之间的流水同步
 
-// 关键改动3：使用自定义 FixpipeUnitFlagTrait（内置 unitFlag=3）
-auto copyL0C2GM = AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2GM{});
-AscendC::Te::Copy(copyL0C2GM, gmBlockC_, tensorL0C, AscendC::Te::FixpipeParams{UNITFLAG_EN_OUTER_LAST});
+// 关键改动3：使用自定义 FixpipeUnitFlagTrait（内置 unit_flag=enable_update）
+auto copyL0C2GM = asc::te::make_copy(asc::te::copy_l0c_to_gm{});
+asc::te::copy(copyL0C2GM.with(asc::te::l0c_to_gm_params{asc::te::unit_flag_mode::enable_update}), gmBlockC_, tensorL0C);
 
 ```
 

@@ -48,27 +48,27 @@
     <table>
     <tr><th align="left">步骤</th><th align="left">Tensor API操作</th><th align="left">功能</th><th align="left">布局转换</th></tr>
     <tr><td align="left">1</td><td align="left">常量化Tiling参数</td><td align="left">通过模板参数传入kernel</td><td align="left">不涉及</td></tr>
-    <tr><td align="left">2</td><td align="left">MakeTensor + Slice</td><td align="left">创建GM张量并切片获取当前核处理的数据块</td><td align="left">ND格式</td></tr>
-    <tr><td align="left">3</td><td align="left">Copy(CopyGM2L1)</td><td align="left">将A矩阵和B矩阵数据从GM搬运到L1</td><td align="left">ND->NZ格式转换</td></tr>
-    <tr><td align="left">4</td><td align="left">Copy(CopyL12L0A/B)</td><td align="left">将数据从L1搬运到L0A和L0B</td><td align="left">L1->L0A: NZ->NZ<br>L1->L0B: NZ->ZN</td></tr>
-    <tr><td align="left">5</td><td align="left">Mmad</td><td align="left">完成矩阵乘加计算</td><td align="left">矩阵乘结果为NZ格式</td></tr>
-    <tr><td align="left">6</td><td align="left">Copy(CopyL0C2GM)</td><td align="left">将L0C中的计算结果搬运到GM</td><td align="left">NZ->ND格式转换</td></tr>
+    <tr><td align="left">2</td><td align="left">make_tensor + slice</td><td align="left">创建GM张量并切片获取当前核处理的数据块</td><td align="left">ND格式</td></tr>
+    <tr><td align="left">3</td><td align="left">copy(copy_gm_to_l1)</td><td align="left">将A矩阵和B矩阵数据从GM搬运到L1</td><td align="left">ND->NZ格式转换</td></tr>
+    <tr><td align="left">4</td><td align="left">copy(copy_l1_to_l0a/b)</td><td align="left">将数据从L1搬运到L0A和L0B</td><td align="left">L1->L0A: NZ->NZ<br>L1->L0B: NZ->ZN</td></tr>
+    <tr><td align="left">5</td><td align="left">mmad</td><td align="left">完成矩阵乘加计算</td><td align="left">矩阵乘结果为NZ格式</td></tr>
+    <tr><td align="left">6</td><td align="left">copy(copy_l0c_to_gm)</td><td align="left">将L0C中的计算结果搬运到GM</td><td align="left">NZ->ND格式转换</td></tr>
     </table>
 
   - Tensor API核心接口：
-    1. **张量创建接口**：使用MakeTensor + MakeMemPtr + MakeFrameLayout创建各级张量
-       - GM张量：NDExtLayoutPtn布局（ND格式扩展）
-       - L1/L0张量：NZLayoutPtn/ZNLayoutPtn布局（适配cube计算单元）
+    1. **张量创建接口**：使用make_tensor + make_mem_ptr + make_frame_layout创建各级张量
+       - GM张量：nd_ext_layout_ptn布局（ND格式扩展）
+       - L1/L0张量：nz_layout_ptn/zn_layout_ptn布局（适配cube计算单元）
 
-    2. **数据搬运接口**：使用Copy + CopyAtom抽象
-       - CopyGM2L1：GM到L1的数据搬运，自动处理ND→NZ格式转换
-       - CopyL12L0A/B：L1到L0A/L0B的数据搬运
-       - CopyL0C2GM：L0C到GM的数据搬运，自动处理NZ→ND格式转换
+    2. **数据搬运接口**：使用copy + copy_atom抽象
+       - copy_gm_to_l1：GM到L1的数据搬运，自动处理ND→NZ格式转换
+       - copy_l1_to_l0a/b：L1到L0A/L0B的数据搬运
+       - copy_l0c_to_gm：L0C到GM的数据搬运，自动处理NZ→ND格式转换
 
-    3. **矩阵乘接口**：使用Mmad + MmadAtom抽象
-       - 自动管理累加控制（cmatrixInitVal参数）
+    3. **矩阵乘接口**：使用mmad + mmad_atom抽象
+       - 自动管理累加控制（init_with_zero参数）
 
-    4. **切片接口**：使用Slice + MakeCoord + MakeShape获取张量的子区域
+    4. **切片接口**：使用slice + make_coord + make_shape获取张量的子区域
        - 实现分核逻辑：每个核处理不同的数据块
        - 实现分块逻辑：baseM/baseK/baseN的基础块切分
 

@@ -85,7 +85,7 @@ npusim 降至 453 cycles，相比阶段 0 减少 35.2%，有效输出吞吐提�
 packed INT4 输入和 BF16 输出的计数单位不同：输入 GM/UB Tensor 以物理 byte 表示，输出 Tensor 以逻辑元素表示。进入 VF 后才把 packed UB 基址解释为 `int4x2_t*`，循环次数由 packed input view 推导：
 
 ```cpp
-const uint32_t computePackedBytes = static_cast<uint32_t>(inputUb.Layout().Size());
+const uint32_t computePackedBytes = static_cast<uint32_t>(inputUb.layout().size());
 const uint16_t groupTimes =
     static_cast<uint16_t>(computePackedBytes / kPackedBytesPerGroup);
 ```

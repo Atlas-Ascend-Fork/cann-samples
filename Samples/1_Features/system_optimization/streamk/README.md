@@ -100,7 +100,7 @@ __global__ __aicore__ __mix__(1, 2) void MatmulKernel(
                                        tool::BLOCK_BASE_M * tool::BLOCK_BASE_N;
             // 构建 workspace 张量对象（GM 内存视图）
             auto gmWorkSpace =
-                AscendC::Te::MakeTensor(AscendC::Te::MakeGMmemPtr(workspaceGmAddr + offsetWorkspace), layoutWorkspace);
+                asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(workspaceGmAddr + offsetWorkspace), layoutWorkspace);
            
             for (uint64_t iter0 = 0; iter0 < kL1TileNum; ++iter0) {
                 // L0 层内部迭代（实际的计算/搬运操作）
@@ -110,12 +110,12 @@ __global__ __aicore__ __mix__(1, 2) void MatmulKernel(
                 // 当 K 维度的最后一轮迭代完成时，将 L0C 中的累加结果搬运到 workspace
                 if (iter0 + 1 == kL1TileNum) {
                     // 创建 L0C 到 GM 的拷贝操作
-                    auto CopyL0C2GM = AscendC::Te::MakeCopy(AscendC::Te::CopyL0C2GM{});
+                    auto CopyL0C2GM = asc::te::make_copy(asc::te::copy_l0c_to_gm{});
                     // 执行拷贝：将 L0C 中的数据写入 workspace 指定偏移位置
-                    // FINAL_ACCUMULATION 表示这是最终累加结果，需要写回
-                    AscendC::Te::Copy(
+                    // asc::te::unit_flag_mode::enable_update 表示这是最终累加结果，需要写回
+                    asc::te::copy(
                         CopyL0C2GM, gmWorkSpace, tensorL0C, 
-                        AscendC::Te::FixpipeParams{tool::FINAL_ACCUMULATION});
+                        asc::te::l0c_to_gm_params{asc::te::unit_flag_mode::enable_update});
                 }
             }
         }

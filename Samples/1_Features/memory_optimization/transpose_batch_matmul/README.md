@@ -22,7 +22,7 @@
 
 **隐含约束**：
 * stride 取值必须与 shape 和 Hardware C0 对齐要求兼容，不能导致非对齐访存；
-* 对于 B 矩阵，Layout 模板（`NDExtLayoutPtn` / `DNExtLayoutPtn`）决定了 L1 中的分形排布，需和后续 L1→L0 搬运的模板一致。
+* 对于 B 矩阵，Layout 模板（`nd_ext_layout_ptn` / `dn_ext_layout_ptn`）决定了 L1 中的分形排布，需和后续 L1→L0 搬运的模板一致。
 
 &ensp;&ensp;算子通过 perm_x1 / perm_x2 参数描述 A / B 矩阵各维度的重排方式，其中 `[0, 1, 2]` 分别对应 `[batch, m, k]`（A）或 `[batch, k, n]`（B）：
 
@@ -56,11 +56,11 @@ __global__ __aicore__ void TbmmKernel(GM_ADDR aGm, GM_ADDR bGm, GM_ADDR cGm,
     auto layoutA = MakeNDBatchLayout<T>(batch, m, k, batchStrideA, mStrideA);
 
     // 2. 根据 PERM_X2 选择 B 的 Layout 模板：K-N 是否互换
-    //    TRANS_B=true  → B=[batch, n, k]，使用 DNExtLayoutPtn
-    //    TRANS_B=false → B=[batch, k, n]，使用 NDExtLayoutPtn
+    //    TRANS_B=true  → B=[batch, n, k]，使用 dn_ext_layout_ptn
+    //    TRANS_B=false → B=[batch, k, n]，使用 nd_ext_layout_ptn
     using BGmLayoutPtn = AscendC::Std::conditional_t<TRANS_B,
-                          AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
-    using MakeBLayout = AscendC::Te::FrameLayoutFormat<BGmLayoutPtn, AscendC::Std::Int<AscendC::Te::C0_ELEMENT<T>>>;
+                          asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
+    using MakeBLayout = asc::te::frame_layout_format<BGmLayoutPtn, AscendC::Std::Int<asc::te::c0_element<T>>>;
     auto layoutB = MakeBLayout{}(batch, k, n);
 
     // 3. 输出固定为 [m, batch, n]；batchSplitFactor>1 时 reshape 为 [bsf, m, innerBatch*n]
@@ -77,8 +77,8 @@ __global__ __aicore__ void TbmmKernel(GM_ADDR aGm, GM_ADDR bGm, GM_ADDR cGm,
         ...
         // GM→L1 搬运时，A/B 的 Slice 按上面构造的 stride 自动跳步访问，
         // 等价于在搬运过程中完成转置，无需额外 Transpose 算子
-        AscendC::Te::Copy(copyGM2L1, l1BlockA, gmTileA);
-        AscendC::Te::Copy(copyGM2L1, l1BlockB, gmTileB);
+        asc::te::copy(copyGM2L1, l1BlockA, gmTileA);
+        asc::te::copy(copyGM2L1, l1BlockB, gmTileB);
         ...
     }
 }
@@ -86,7 +86,7 @@ __global__ __aicore__ void TbmmKernel(GM_ADDR aGm, GM_ADDR bGm, GM_ADDR cGm,
 
 **关键改动点**：
 
-* **以 Layout 描述代替显式转置**：通过 `MakeNDBatchLayout` 的 stride 参数与 `NDExtLayoutPtn`/`DNExtLayoutPtn` 模板选择，把 A、B 的转置信息编码进 Layout，搬运指令直接按目标 stride 从 GM 取数，省去一次全量 GM 读写。
+* **以 Layout 描述代替显式转置**：通过 `MakeNDBatchLayout` 的 stride 参数与 `nd_ext_layout_ptn`/`dn_ext_layout_ptn` 模板选择，把 A、B 的转置信息编码进 Layout，搬运指令直接按目标 stride 从 GM 取数，省去一次全量 GM 读写。
 * **batch 维参与多核调度**：`totalBlockNums = mBlockNums × nBlockNums × batch`，当 M×N 较小、batch 较大时，batch 维提供更多 block 填满多核。
 * **输出排布与下游对齐**：输出固定为 `[m, batch, n]`，配合 `batchSplitFactor` 可 reshape 为 `[bsf, m, innerBatch×n]`，便于后续算子按 batch 分组消费。
 

@@ -84,7 +84,7 @@ public:
         tailM_ = m_ - (mCnt_ - 1) * baseM_;
         tailN_ = n_ - (nCnt_ - 1) * baseN_;
 
-        blockIdx_ = static_cast<int64_t>(AscendC::GetBlockIdx());
+        blockIdx_ = static_cast<int64_t>(block_idx);
         blockNum_ = static_cast<int64_t>(AscendC::GetBlockNum());
         round_ = totalCnt_ > 0 ? CeilDiv(totalCnt_, blockNum_) : 0;
         endBlockIdx_ = totalCnt_ > 0 ? (totalCnt_ - 1) % blockNum_ : -1;
@@ -126,8 +126,8 @@ public:
 
     __aicore__ inline BlockShape GetBlockShape(BlockCoord blockCoord)
     {
-        int64_t mTileIdx = AscendC::Te::Get<MNK_M>(blockCoord);
-        int64_t nTileIdx = AscendC::Te::Get<MNK_N>(blockCoord);
+        int64_t mTileIdx = asc::te::get<MNK_M>(blockCoord);
+        int64_t nTileIdx = asc::te::get<MNK_N>(blockCoord);
         int64_t singleCoreM = (mTileIdx == mCnt_ - 1) ? tailM_ : baseM_;
         int64_t singleCoreN = (nTileIdx == nCnt_ - 1) ? tailN_ : baseN_;
 
@@ -175,7 +175,7 @@ public:
             AscendC::Std::get<MNK_N>(blockCoord) = (tailIdx / mTailCoreNum_) % nCnt_;
         }
         if (rowIdx & 1) {
-            AscendC::Std::get<MNK_N>(blockCoord) = nCnt_ - 1 - AscendC::Te::Get<MNK_N>(blockCoord);
+            AscendC::Std::get<MNK_N>(blockCoord) = nCnt_ - 1 - asc::te::get<MNK_N>(blockCoord);
         }
 
         roundIdx_++;

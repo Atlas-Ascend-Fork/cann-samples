@@ -40,16 +40,16 @@ public:
     using LayoutB = typename BlockMmad::LayoutB;
     using LayoutScaleA = typename BlockMmad::LayoutScaleA;
     using LayoutScaleB = typename BlockMmad::LayoutScaleB;
-    using LayoutAPattern = AscendC::Te::GetLayoutPattern<decltype(LayoutA{}(0L, 0L))>;
-    using LayoutBPattern = AscendC::Te::GetLayoutPattern<decltype(LayoutB{}(0L, 0L))>;
-    static constexpr bool transA = AscendC::Std::is_same_v<LayoutAPattern, AscendC::Te::DNExtLayoutPtn> ||
-                                   AscendC::Std::is_same_v<LayoutAPattern, AscendC::Te::ZNLayoutPtn>;
-    static constexpr bool transB = AscendC::Std::is_same_v<LayoutBPattern, AscendC::Te::DNExtLayoutPtn> ||
-                                   AscendC::Std::is_same_v<LayoutBPattern, AscendC::Te::ZNLayoutPtn>;
-    static constexpr bool kWeightNzGm_ = AscendC::Std::is_same_v<LayoutBPattern, AscendC::Te::ZNLayoutPtn> ||
-                                         AscendC::Std::is_same_v<LayoutBPattern, AscendC::Te::NZLayoutPtn>;
+    using LayoutAPattern = asc::te::get_layout_pattern<decltype(LayoutA{}(0L, 0L))>;
+    using LayoutBPattern = asc::te::get_layout_pattern<decltype(LayoutB{}(0L, 0L))>;
+    static constexpr bool transA = AscendC::Std::is_same_v<LayoutAPattern, asc::te::dn_ext_layout_ptn> ||
+                                   AscendC::Std::is_same_v<LayoutAPattern, asc::te::zn_layout_ptn>;
+    static constexpr bool transB = AscendC::Std::is_same_v<LayoutBPattern, asc::te::dn_ext_layout_ptn> ||
+                                   AscendC::Std::is_same_v<LayoutBPattern, asc::te::zn_layout_ptn>;
+    static constexpr bool kWeightNzGm_ = AscendC::Std::is_same_v<LayoutBPattern, asc::te::zn_layout_ptn> ||
+                                         AscendC::Std::is_same_v<LayoutBPattern, asc::te::nz_layout_ptn>;
     static constexpr int32_t SCALE_C0 = 2;
-    using ScaleBNzLayout = AscendC::Te::FrameLayoutFormat<AscendC::Te::NNLayoutPtn, AscendC::Std::Int<SCALE_C0>>;
+    using ScaleBNzLayout = asc::te::frame_layout_format<asc::te::nn_layout_ptn, AscendC::Std::Int<SCALE_C0>>;
     static constexpr bool kBscaleNzGm_ = AscendC::Std::is_same_v<LayoutScaleB, ScaleBNzLayout>;
     using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t>;
     using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
@@ -120,13 +120,13 @@ private:
     __aicore__ static inline void SetSchedulerTailAlign(BlockScheduler& bs)
     {
         constexpr uint32_t mTailAlign =
-            (AscendC::Std::is_same_v<LayoutAPattern, AscendC::Te::NDExtLayoutPtn> ||
-             AscendC::Std::is_same_v<LayoutAPattern, AscendC::Te::NZLayoutPtn>) ?
+            (AscendC::Std::is_same_v<LayoutAPattern, asc::te::nd_ext_layout_ptn> ||
+             AscendC::Std::is_same_v<LayoutAPattern, asc::te::nz_layout_ptn>) ?
                 static_cast<uint32_t>(AscendC::BLOCK_CUBE) // (m, k) -> cube tile alignment
                 :
                 GroupedMatmulRecipe::INNER_AXIS_ALIGN; // (k, m) -> ND2NZ cacheline alignment
-        constexpr uint32_t nTailAlign = (AscendC::Std::is_same_v<LayoutBPattern, AscendC::Te::NDExtLayoutPtn> ||
-                                         AscendC::Std::is_same_v<LayoutBPattern, AscendC::Te::NZLayoutPtn>) ?
+        constexpr uint32_t nTailAlign = (AscendC::Std::is_same_v<LayoutBPattern, asc::te::nd_ext_layout_ptn> ||
+                                         AscendC::Std::is_same_v<LayoutBPattern, asc::te::nz_layout_ptn>) ?
                                             GroupedMatmulRecipe::INNER_AXIS_ALIGN // (k, n) -> ND2NZ cacheline alignment
                                             :
                                             static_cast<uint32_t>(AscendC::BLOCK_CUBE); // (n, k) -> cube tile alignment
@@ -184,8 +184,8 @@ private:
                     if (!isKZeroInit) {
                         // Initialize UB buffer with zeros (only once)
                         AscendC::Duplicate<CType>(initLocal, 0, initSize);
-                        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(0);
-                        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(0);
+                        asc_sync_notify(PIPE_V, PIPE_MTE3, EVENT_ID0);
+                        asc_sync_wait(PIPE_V, PIPE_MTE3, EVENT_ID0);
                         isKZeroInit = true;
                     }
 
@@ -291,30 +291,30 @@ private:
     {
         if constexpr (kWeightNzGm_) {
             if (curBaseM >= AscendC::Std::get<MNK_M>(problemShape)) {
-                gmB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_DISABLE);
-                gmScaleB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_DISABLE);
+                gmB.set_l2_cache_hint(asc::te::cache_mode::disable);
+                gmScaleB.set_l2_cache_hint(asc::te::cache_mode::disable);
             } else {
-                gmB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_NORMAL);
-                gmScaleB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_NORMAL);
+                gmB.set_l2_cache_hint(asc::te::cache_mode::normal);
+                gmScaleB.set_l2_cache_hint(asc::te::cache_mode::normal);
             }
         } else {
             if constexpr (transB) {
                 if (curBaseM >= AscendC::Std::get<MNK_M>(problemShape) &&
                     (AscendC::Std::get<MNK_K>(problemShape) & 0xff) == 0) {
-                    gmB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_DISABLE);
-                    gmScaleB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_DISABLE);
+                    gmB.set_l2_cache_hint(asc::te::cache_mode::disable);
+                    gmScaleB.set_l2_cache_hint(asc::te::cache_mode::disable);
                 } else {
-                    gmB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_NORMAL);
-                    gmScaleB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_NORMAL);
+                    gmB.set_l2_cache_hint(asc::te::cache_mode::normal);
+                    gmScaleB.set_l2_cache_hint(asc::te::cache_mode::normal);
                 }
             } else {
                 if (curBaseM >= AscendC::Std::get<MNK_M>(problemShape) &&
                     (AscendC::Std::get<MNK_N>(problemShape) & 0xff) == 0 && (baseN & 0xff) == 0) {
-                    gmB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_DISABLE);
-                    gmScaleB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_DISABLE);
+                    gmB.set_l2_cache_hint(asc::te::cache_mode::disable);
+                    gmScaleB.set_l2_cache_hint(asc::te::cache_mode::disable);
                 } else {
-                    gmB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_NORMAL);
-                    gmScaleB.SetL2CacheHint(AscendC::Te::CacheMode::CACHE_MODE_NORMAL);
+                    gmB.set_l2_cache_hint(asc::te::cache_mode::normal);
+                    gmScaleB.set_l2_cache_hint(asc::te::cache_mode::normal);
                 }
             }
         }
@@ -407,15 +407,15 @@ private:
         auto layoutB = LayoutB{}(groupK, groupN);
         auto layoutScaleA = LayoutScaleA{}(groupM, scaleK);
         auto layoutScaleB = LayoutScaleB{}(scaleK, groupN);
-        auto groupA = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupAPtr), layoutA);
-        auto groupB = AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupBPtr), layoutB);
+        auto groupA = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(groupAPtr), layoutA);
+        auto groupB = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(groupBPtr), layoutB);
         auto groupScaleA =
-            AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupScaleAPtr), layoutScaleA);
+            asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(groupScaleAPtr), layoutScaleA);
         auto groupScaleB =
-            AscendC::Te::MakeTensor(AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupScaleBPtr), layoutScaleB);
-        auto groupC = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupCPtr),
-            AscendC::Te::MakeFrameLayout<AscendC::Te::NDExtLayoutPtn>(groupM, groupN));
+            asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::gm>(groupScaleBPtr), layoutScaleB);
+        auto groupC = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(groupCPtr),
+            asc::te::make_frame_layout<asc::te::nd_ext_layout_ptn>(groupM, groupN));
         if constexpr (!isLastGroupAndNeedSplit) {
             SetL2Cache(problemShape_, curBaseM_, params.kernelParams.baseN, groupB, groupScaleB);
         }
@@ -432,14 +432,14 @@ private:
                               AscendC::Std::get<3>(singleShape);
             int64_t tileM = AscendC::Std::get<MNK_M>(singleShape);
             int64_t tileN = AscendC::Std::get<MNK_N>(singleShape);
-            auto gmBlockA = groupA.Slice(AscendC::Te::MakeCoord(mOffset, 0), AscendC::Te::MakeShape(tileM, groupK));
-            auto gmBlockB = groupB.Slice(AscendC::Te::MakeCoord(0, nOffset), AscendC::Te::MakeShape(groupK, tileN));
+            auto gmBlockA = groupA.slice(asc::te::make_coord(mOffset, 0), asc::te::make_shape(tileM, groupK));
+            auto gmBlockB = groupB.slice(asc::te::make_coord(0, nOffset), asc::te::make_shape(groupK, tileN));
             auto gmBlockScaleA =
-                groupScaleA.Slice(AscendC::Te::MakeCoord(mOffset, 0), AscendC::Te::MakeShape(tileM, scaleK));
+                groupScaleA.slice(asc::te::make_coord(mOffset, 0), asc::te::make_shape(tileM, scaleK));
             auto gmBlockScaleB =
-                groupScaleB.Slice(AscendC::Te::MakeCoord(0, nOffset), AscendC::Te::MakeShape(scaleK, tileN));
+                groupScaleB.slice(asc::te::make_coord(0, nOffset), asc::te::make_shape(scaleK, tileN));
             auto gmBlockC =
-                groupC.Slice(AscendC::Te::MakeCoord(mOffset, nOffset), AscendC::Te::MakeShape(tileM, tileN));
+                groupC.slice(asc::te::make_coord(mOffset, nOffset), asc::te::make_shape(tileM, tileN));
             BlockMmadShape mmadShape{tileM, tileN, static_cast<int64_t>(groupK)};
             mmadOp_(gmBlockA, gmBlockB, gmBlockScaleA, gmBlockScaleB, gmBlockC, mmadShape);
         } while (bs.GetTileIdx(tileIdx));

@@ -29,15 +29,15 @@
 for (uint64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
 
   // 1. 在 L1 缓存中预先申请 A 矩阵的存储空间
-  auto layoutAL1 = AscendC::Te::MakeLayoutAL1<T>{}(curM, k);
-  auto tensorAL1 = AscendC::Te::MakeTensor(AscendC::Te::MakeL1memPtr<T>(l1BufferAOffset[0]), layoutAL1);
+  auto layoutAL1 = asc::te::MakeLayoutAL1<T>{}(curM, k);
+  auto tensorAL1 = asc::te::make_tensor(asc::te::make_mem_ptr<asc::te::location::l1, T>(l1BufferAOffset[0]), layoutAL1);
   
   for (uint64_t iter0 = 0; iter0 < kL1TileNum; ++iter0) {
     // 2. 仅在第一轮循环时执行数据搬运，后续轮次直接复用 L1 中已缓存的 A 矩阵
     if (l1PingPong < kL1TileNum) {
         auto tensorAGmTile =
-            tensorAGmBlock(AscendC::Te::MakeCoord(0, iter0 * kL1), AscendC::Te::MakeShape(curM, curGmAKL1));
-        AscendC::Te::Copy(copyGM2L1, tensorBlockAL1, tensorAGmTile);
+            tensorAGmBlock(asc::te::make_coord(0, iter0 * kL1), asc::te::make_shape(curM, curGmAKL1));
+        asc::te::copy(copyGM2L1, tensorBlockAL1, tensorAGmTile);
     }
   }
 }

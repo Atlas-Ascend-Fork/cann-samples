@@ -48,11 +48,11 @@ __aicore__ inline void ShiftW4ToW8(
     static_assert(std::is_same_v<InType, __fp4e2m1x2>, "InType must be __fp4e2m1x2");
 
     ShiftW4ToW8Params<OutType, InType> params;
-    params.weight4BitPhyAddr = (__ubuf__ InType*)weight4BitTensor.Data().Get();
-    params.weight8BitPhyAddr = (__ubuf__ OutType*)weight8BitTensor.Data().Get();
-    params.loopKNum = AscendC::Std::get<1>(AscendC::Std::get<0>(weight4BitTensor.Layout().Shape()));
-    params.nRealSizeAlign = AscendC::Std::get<1>(AscendC::Std::get<1>(weight4BitTensor.Layout().Shape())) * CUBE_BLOCK;
-    params.innerDstStride = AscendC::Std::get<1>(AscendC::Std::get<1>(weight8BitTensor.Layout().Stride()));
+    params.weight4BitPhyAddr = (__ubuf__ InType*)weight4BitTensor.data().get();
+    params.weight8BitPhyAddr = (__ubuf__ OutType*)weight8BitTensor.data().get();
+    params.loopKNum = AscendC::Std::get<1>(AscendC::Std::get<0>(weight4BitTensor.layout().shape()));
+    params.nRealSizeAlign = AscendC::Std::get<1>(AscendC::Std::get<1>(weight4BitTensor.layout().shape())) * CUBE_BLOCK;
+    params.innerDstStride = AscendC::Std::get<1>(AscendC::Std::get<1>(weight8BitTensor.layout().stride()));
     params.innerLoopNum = (params.nRealSizeAlign * FP8_C0_SIZE) / static_cast<uint64_t>(AscendC::GetVecLen());
     params.loopKDstStride = params.innerLoopNum * params.innerDstStride;
 

@@ -144,12 +144,12 @@ private:
         __gm__ BType* groupBPtr =
             wGmAddr_ + static_cast<int64_t>(groupIdx) * static_cast<int64_t>(n_) * static_cast<int64_t>(k_);
         __gm__ CType* groupCPtr = yGmAddr_ + preGroupMSum_ * static_cast<int64_t>(n_);
-        auto groupA = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupAPtr), LayoutA{}(groupM, groupK));
-        auto groupB = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupBPtr), LayoutB{}(groupK, groupN));
-        auto groupC = AscendC::Te::MakeTensor(
-            AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(groupCPtr), LayoutC{}(groupM, groupN));
+        auto groupA = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(groupAPtr), LayoutA{}(groupM, groupK));
+        auto groupB = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(groupBPtr), LayoutB{}(groupK, groupN));
+        auto groupC = asc::te::make_tensor(
+            asc::te::make_mem_ptr<asc::te::location::gm>(groupCPtr), LayoutC{}(groupM, groupN));
 
         bool isPerChannel = static_cast<GroupedMatmulRecipe::QuantMode>(params.kernelParams.x2QuantMode) ==
                             GroupedMatmulRecipe::QuantMode::PERCHANNEL_MODE;
@@ -164,21 +164,21 @@ private:
                               AscendC::Std::get<MNK_B>(singleShape);
             int64_t tileM = AscendC::Std::get<MNK_M>(singleShape);
             int64_t tileN = AscendC::Std::get<MNK_N>(singleShape);
-            auto gmBlockA = groupA.Slice(
-                AscendC::Te::MakeCoord(mOffset, 0), AscendC::Te::MakeShape(tileM, groupK));
-            auto gmBlockB = groupB.Slice(
-                AscendC::Te::MakeCoord(0, nOffset), AscendC::Te::MakeShape(groupK, tileN));
-            auto gmBlockC = groupC.Slice(
-                AscendC::Te::MakeCoord(mOffset, nOffset), AscendC::Te::MakeShape(tileM, tileN));
+            auto gmBlockA = groupA.slice(
+                asc::te::make_coord(mOffset, 0), asc::te::make_shape(tileM, groupK));
+            auto gmBlockB = groupB.slice(
+                asc::te::make_coord(0, nOffset), asc::te::make_shape(groupK, tileN));
+            auto gmBlockC = groupC.slice(
+                asc::te::make_coord(mOffset, nOffset), asc::te::make_shape(tileM, tileN));
             if (isPerChannel) {
-                auto layoutX2 = AscendC::Te::MakeFrameLayout<
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::LayoutTraitDefault<X2ScaleType>>(1, groupN);
-                auto gmX2Full = AscendC::Te::MakeTensor(
-                    AscendC::Te::MakeMemPtr<AscendC::Te::Location::GM>(
+                auto layoutX2 = asc::te::make_frame_layout<
+                    asc::te::nd_ext_layout_ptn, asc::te::layout_trait_default<X2ScaleType>>(1, groupN);
+                auto gmX2Full = asc::te::make_tensor(
+                    asc::te::make_mem_ptr<asc::te::location::gm>(
                         x2ScaleU64GmAddr_ + static_cast<int64_t>(groupIdx) * static_cast<int64_t>(n_)),
                     layoutX2);
-                auto gmBlockX2 = gmX2Full.Slice(
-                    AscendC::Te::MakeCoord(0, nOffset), AscendC::Te::MakeShape(1, tileN));
+                auto gmBlockX2 = gmX2Full.slice(
+                    asc::te::make_coord(0, nOffset), asc::te::make_shape(1, tileN));
                 mmOp_(gmBlockA, gmBlockB, gmBlockX2, gmBlockC, singleShape);
             } else {
                 mmOp_(gmBlockA, gmBlockB, BuildScalarScale(groupIdx), gmBlockC, singleShape);
