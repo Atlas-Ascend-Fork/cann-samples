@@ -3,3 +3,4 @@ build_out/
 CLAUDE.md
 __pycache__/
 *.pyc
+pre-commit_reports/
