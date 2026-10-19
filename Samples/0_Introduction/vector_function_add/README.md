@@ -37,7 +37,7 @@ __simd_vf__ inline void VectorFunctionAdd(
 
 - 一条 `Add` 指令同时作用于一个寄存器宽度的一整批元素（SIMD），不是单个标量
 - 最后一批元素不满一个寄存器宽度时，mask 只让前 `remain` 个元素生效，其余 lane 被屏蔽
-- Kernel 通过 `asc_vf_call` 调用 VF，VF 的 Load / 运算 / Store 全部由开发者控制
+- Kernel 直接调用 `VectorFunctionAdd<T>(...)` 执行 VF，VF 的 Load / 运算 / Store 全部由开发者控制
 
 ## 支持架构
 
