@@ -86,8 +86,6 @@ npx skills add https://gitcode.com/cann/cann-samples.git --skill samples
 
   前往[CANN 快速安装](https://www.hiascend.com/cann/download)页面，选择“稳定版本”。仅支持 **CANN 9.0.0 正式版及更新版本**。
 
-> **说明**：如果仅体验 cann-samples 样例，无需安装 CANN ops 包；已安装 ops 包也不影响样例的使用。
-
 #### 历史验证通过的 Weekly 版本
 
 下表记录了本仓库历史验证通过的社区版 CANN Toolkit Weekly 版本，按时间戳从新到旧排列，供安装时备选。请根据实际 CPU 架构选择下载链接；涉及 Tensor API 的样例请使用表中已验证通过的版本。
