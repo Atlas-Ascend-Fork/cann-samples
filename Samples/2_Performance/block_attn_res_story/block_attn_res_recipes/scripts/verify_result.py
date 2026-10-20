@@ -110,6 +110,23 @@ def verify_update(root: str, method: str = DEFAULT_COMPARE) -> bool:
     ])
 
 
+def verify_file_sizes(root: str, mode: str, t: int, s: int, d: int) -> bool:
+    outputs = {}
+    if mode in ("prepare", "e2e"):
+        outputs.update({"prepare_numerator": s * t * d * 4,
+                        "prepare_logit_max": s * t * 4, "prepare_exp_sum": s * t * 4})
+    if mode in ("update", "e2e"):
+        outputs.update({"update_partial": t * d * 4, "update_h": t * d * 2})
+    for name, expected_bytes in outputs.items():
+        for prefix in ("npu", "golden"):
+            filename = os.path.join(root, "output", f"{prefix}_{name}.bin")
+            actual_bytes = os.path.getsize(filename)
+            if actual_bytes != expected_bytes:
+                print(f"{prefix}_{name}: FAILED, file size {actual_bytes} != {expected_bytes} bytes")
+                return False
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", required=True)
@@ -119,10 +136,13 @@ def main() -> None:
     parser.add_argument("--d", type=int, required=True)
     parser.add_argument("--compare", choices=("stat_rel_err", "isclose"), default=DEFAULT_COMPARE)
     args = parser.parse_args()
-    ok = True
-    if args.mode in ("prepare", "e2e"):
+    if args.t <= 0 or args.s <= 0 or not 1 <= args.d <= 8192:
+        parser.error("t/s must be positive and d must be in [1, 8192]")
+    sizes_ok = verify_file_sizes(args.root, args.mode, args.t, args.s, args.d)
+    ok = sizes_ok
+    if sizes_ok and args.mode in ("prepare", "e2e"):
         ok = verify_prepare(args.root, args.compare) and ok
-    if args.mode in ("update", "e2e"):
+    if sizes_ok and args.mode in ("update", "e2e"):
         ok = verify_update(args.root, args.compare) and ok
     print(f"block_attn_res_{args.mode}: {'PASSED' if ok else 'FAILED'}")
     sys.exit(0 if ok else 1)

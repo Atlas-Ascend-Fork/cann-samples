@@ -42,6 +42,22 @@ block_attn_res_recipes/
 - 支持范围、构建步骤、运行参数和性能采集说明见[样例 README](examples/block_attn_res/README.md)。
 - 运行样例时自动生成数据并校验结果，校验脚本输出精度统计及通过或失败状态。
 
+## 结果文件与 Host 回归
+
+校验 CLI 的 `--t`、`--s`、`--d` 必须与运行样例的尺寸一致：`T/S > 0`，`1 <= D <= 8192`。
+Prepare 的 `numerator` 为 `S*T*D` 个 FP32 元素，`logit_max` 和 `exp_sum` 各为 `S*T` 个 FP32 元素；
+Update 的 `partial` 为 `T*D` 个 FP32 元素，`h` 为 `T*D` 个 BF16 元素。
+对应的 `npu_*.bin` 与 `golden_*.bin` 均须具有完整的精确字节数；尺寸不匹配或有不完整元素尾字节时不能只比较有效前缀。
+
+仅验证 Host 校验器的回归可在仓库根目录执行：
+
+```bash
+python3 -m pytest -q tests/host/test_blockattn_output_sizes.py --confcutdir=tests/host
+```
+
+该回归使用临时二进制文件与真实校验 CLI，仅依赖 Python、NumPy 和 pytest；无需 CANN SDK/NPU。
+它验证文件尺寸及既有数值比较行为，不代表设备算子精度或性能测试通过。
+
 ## 性能优化指南
 
 两阶段推理拆分、性能建模、模板选择、Kernel 流水和融合收益详见 [BlockAttnRes 两阶段推理算子性能优化指南](../docs/block_attn_res_performance.md)。
