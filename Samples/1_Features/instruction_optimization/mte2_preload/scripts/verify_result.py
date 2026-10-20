@@ -53,6 +53,9 @@ def _print_large_tensor_summary(golden_tensor: torch.Tensor, npu_output_tensor: 
 
 
 def verify_result(m, n):
+    if m <= 0 or n <= 0:
+        raise ValueError("m and n must be positive")
+
     output = np.fromfile("./output/npu_out.bin", dtype=DATA_TYPE)
     golden = np.fromfile("./output/cpu_output.bin", dtype=DATA_TYPE)
 
