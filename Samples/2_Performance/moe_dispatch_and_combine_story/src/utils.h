@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <acl/acl.h>
 #include <climits>
+#include <cerrno>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -228,11 +230,24 @@ inline int MoeDemoForkMain(int argc, char *argv[], MoeRankWorkerFunc worker, uin
 
     INFO_LOG("Master (PID=%d) will fork %d processes", getpid(), rankNum);
 
-    std::vector<pid_t> pids(static_cast<size_t>(rankNum));
+    std::vector<pid_t> pids(static_cast<size_t>(rankNum), -1);
+    auto stopWorkers = [&]() {
+        for (pid_t pid : pids) {
+            if (pid > 0) {
+                kill(pid, SIGTERM);
+            }
+        }
+        for (pid_t pid : pids) {
+            if (pid > 0) {
+                while (waitpid(pid, nullptr, 0) < 0 && errno == EINTR) {}
+            }
+        }
+    };
     for (int rankId = 0; rankId < rankNum; ++rankId) {
         const pid_t pid = fork();
         if (pid < 0) {
             ERROR_LOG("Fork failed for rank %d", rankId);
+            stopWorkers();
             return -1;
         }
         if (pid == 0) {
@@ -244,13 +259,29 @@ inline int MoeDemoForkMain(int argc, char *argv[], MoeRankWorkerFunc worker, uin
     }
 
     bool allSuccess = true;
-    for (int rankId = 0; rankId < rankNum; ++rankId) {
+    for (int completed = 0; completed < rankNum;) {
         int status = 0;
-        const pid_t pid = pids[static_cast<size_t>(rankId)];
-        waitpid(pid, &status, 0);
+        const pid_t pid = waitpid(-1, &status, 0);
+        if (pid < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            ERROR_LOG("Waiting for workers failed");
+            allSuccess = false;
+            stopWorkers();
+            break;
+        }
+        auto workerPid = std::find(pids.begin(), pids.end(), pid);
+        if (workerPid == pids.end()) {
+            continue;
+        }
+        *workerPid = -1;
+        ++completed;
         if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
             allSuccess = false;
             ERROR_LOG("Worker PID %d failed", pid);
+            stopWorkers();
+            break;
         }
     }
 
