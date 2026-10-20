@@ -4,6 +4,8 @@
 
 本样例通过使用<<<>>>内核调用符来完成样例核函数在NPU侧运行验证的基础流程，核函数内通过printf打印输出结果。
 
+Host 侧先调用 `aclInit(nullptr)` 初始化 Runtime，再设置 Device、创建 Stream 并启动核函数；运行结束后销毁 Stream、重置 Device，最后调用 `aclFinalize()`。这两个 Runtime 接口与内核使用 C 风格还是 C++ 风格 API 无关。
+
 ## 本样例支持的产品及CANN软件版本
 
 | 产品 | CANN软件版本 |
@@ -62,7 +64,7 @@
 
 - 执行结果  
   执行结果如下，说明执行成功。
-  
+
   ```bash
   [AIV Block 0/8] Hello World!!!
   [AIV Block 1/8] Hello World!!!

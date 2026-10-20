@@ -4,6 +4,8 @@
 
 This sample demonstrates the basic process of running and verifying a kernel function on the NPU side using the <<<>>> kernel launch operator. The kernel function prints output results via printf.
 
+The host calls `aclInit(nullptr)` to initialize the Runtime before setting the device, creating the stream, and launching the kernel. After execution, it destroys the stream, resets the device, and calls `aclFinalize()`. These Runtime APIs are independent of whether the kernel uses C-style or C++-style APIs.
+
 ## Supported Products and CANN Software Versions
 
 | Product | CANN Software Version |
@@ -65,7 +67,7 @@ Execute the following steps in the root directory of this sample to build and ru
 - Execution Results
 
   The following execution results indicate successful execution.
-  
+
   ```bash
   [AIV Block 0/8] Hello World!!!
   [AIV Block 1/8] Hello World!!!
