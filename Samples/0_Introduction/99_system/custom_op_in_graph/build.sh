@@ -13,7 +13,7 @@ project_path=$(cd "$(dirname "$0")"; pwd)
 repo_root=$(cd "${project_path}/../../../.."; pwd)
 
 if [ "x$1" == "xclean" ] 2>/dev/null; then
-  rm -rf ${project_path}/build_out
+  rm -rf "${project_path}/build_out"
   echo "[INFO] Clean successfully."
   exit 0
 fi
@@ -26,14 +26,14 @@ log() {
 NPU_ARCH=${NPU_ARCH:-dav-3510}
 
 log "[INFO] Cmake configure begin."
-cmake -S ${repo_root} -B ${repo_root}/build -DNPU_ARCH=${NPU_ARCH}
+cmake -S "${repo_root}" -B "${repo_root}/build" -DNPU_ARCH="${NPU_ARCH}"
 if [ $? -ne 0 ]; then
   log "[ERROR] Please check cmake configure result."
   exit 1
 fi
 
 log "[INFO] Build begin."
-cmake --build ${repo_root}/build --target cust_onnx_parsers cust_tf_parsers --parallel
+cmake --build "${repo_root}/build" --target cust_onnx_parsers cust_tf_parsers --parallel
 if [ $? -ne 0 ]; then
   log "[ERROR] Please check build result."
   exit 1
