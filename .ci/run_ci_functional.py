@@ -148,7 +148,10 @@ def run_sample(sample: dict[str, Any], artifact_root: Path | None) -> dict[str, 
     results: list[CommandResult] = []
     try:
         for entry in sample.get("setup", []):
-            results.append(run_command(entry, "setup", sample_artifact_dir))
+            result = run_command(entry, "setup", sample_artifact_dir)
+            results.append(result)
+            if result.exit_code != 0:
+                raise RuntimeError(f"setup:{result.name} failed with exit code {result.exit_code}")
         for entry in sample.get("steps", []):
             results.append(run_command(entry, "step", sample_artifact_dir))
     except Exception as exc:
