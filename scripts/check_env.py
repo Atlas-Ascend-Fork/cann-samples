@@ -69,6 +69,10 @@ def check_command(cmd_name, min_version=None, version_args=None):
     try:
         result = subprocess.run([cmd_path] + args, capture_output=True, text=True, timeout=5)
         version_text = result.stdout + result.stderr
+        if result.returncode != 0:
+            _logger.warning(f"  {WARN} `{cmd_name}` version query exited with status "
+                            f"{result.returncode}; skipping version comparison")
+            return True
     except subprocess.TimeoutExpired:
         _logger.warning(f"  {WARN} `{cmd_name}` found at {cmd_path} but version query timed out")
         return True
