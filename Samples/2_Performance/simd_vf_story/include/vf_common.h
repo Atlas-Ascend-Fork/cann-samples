@@ -52,17 +52,21 @@ inline std::vector<float> GenInput(uint32_t n)
 // 绝对容差比对（max / elemwise：精确）
 inline bool VerifyAbs(const std::vector<float>& got, const std::vector<float>& ref, float tol)
 {
-    for (size_t k = 0; k < ref.size(); k++)
-        if (std::fabs(got[k] - ref[k]) > tol) return false;
+    for (size_t k = 0; k < ref.size(); k++) {
+        float diff = std::fabs(got[k] - ref[k]);
+        if (!std::isfinite(diff) || diff > tol) return false;
+    }
     return true;
 }
 
 // 相对容差比对（sum：浮点重排有低位差异）
 inline bool VerifyRel(const std::vector<float>& got, const std::vector<float>& ref, double rtol)
 {
-    for (size_t k = 0; k < ref.size(); k++)
-        if (std::fabs((double)got[k] - (double)ref[k]) > rtol * (std::fabs((double)ref[k]) + 1.0))
+    for (size_t k = 0; k < ref.size(); k++) {
+        double diff = std::fabs((double)got[k] - (double)ref[k]);
+        if (!std::isfinite(diff) || diff > rtol * (std::fabs((double)ref[k]) + 1.0))
             return false;
+    }
     return true;
 }
 
