@@ -149,8 +149,8 @@ bool WriteBin(const std::string& path, const void* data, size_t bytes)
         return false;
     }
     const size_t writtenBytes = std::fwrite(data, 1, bytes, file);
-    std::fclose(file);
-    return writtenBytes == bytes;
+    const int closeStatus = std::fclose(file);
+    return writtenBytes == bytes && closeStatus == 0;
 }
 
 bool ParseU32(const char* text, uint32_t& value)

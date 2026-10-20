@@ -92,8 +92,8 @@ bool WriteBin(const std::string& path, const std::vector<uint16_t>& in)
         return false;
     }
     size_t wr = std::fwrite(in.data(), sizeof(uint16_t), in.size(), f);
-    std::fclose(f);
-    return wr == in.size();
+    const int closeStatus = std::fclose(f);
+    return wr == in.size() && closeStatus == 0;
 }
 
 void PrintUsage(const char* prog)
