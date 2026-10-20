@@ -12,6 +12,7 @@
 # ----------------------------------------------------------------------------------------------------------
 
 import argparse
+import sys
 from pathlib import Path
 from pprint import pprint
 
@@ -21,6 +22,9 @@ parser.add_argument("--op-out-dir", default='./output', type=str, help="op outpu
 args = parser.parse_args()
 
 golden_dir, op_out_dir = Path(args.golden_dir).resolve(), Path(args.op_out_dir).resolve()
+
+if not golden_dir.is_dir():
+    sys.exit(f"golden directory does not exist: {golden_dir}")
 
 accuracy_result = {}
 for golden_bin in golden_dir.rglob("*.bin"):
@@ -34,7 +38,8 @@ for golden_bin in golden_dir.rglob("*.bin"):
 print('accuracy result:')
 pprint(accuracy_result)
 print()
-if (all(accuracy_result.values())):
+if accuracy_result and all(accuracy_result.values()):
     print("accuracy test success.")
 else:
-    print("accuracy test fail.")
+    print("accuracy test fail: mismatched output or no golden files.")
+    sys.exit(1)
