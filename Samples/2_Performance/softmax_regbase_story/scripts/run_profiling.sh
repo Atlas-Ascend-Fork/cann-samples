@@ -9,6 +9,19 @@ ROUNDS="${2:-3}"
 SAMPLE_DIR="Samples/2_Performance/softmax_regbase_story"
 PROF_BASE="./prof_data"
 
+if [[ ! "$ROUNDS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: rounds must be a positive integer" >&2
+    exit 2
+fi
+for required_command in msprof bc; do
+    if ! command -v "$required_command" > /dev/null 2>&1; then
+        echo "ERROR: required command not found: $required_command" >&2
+        exit 127
+    fi
+done
+mkdir -p "$PROF_BASE" || exit 1
+failed=0
+
 CASES=(
     "0_membase:softmax_regbase_0_membase"
     "1_vf_fused:softmax_regbase_1_vf_fused"
@@ -44,6 +57,7 @@ for entry in "${CASES[@]}"; do
 
     if [ ! -f "$exe" ]; then
         printf "%-22s %10s\n" "$name" "NOT FOUND"
+        failed=1
         continue
     fi
 
@@ -56,10 +70,17 @@ for entry in "${CASES[@]}"; do
         else
             application="./${exe}"
         fi
-        msprof --application="${application}" --output="${prof_dir}" > /dev/null 2>&1
+        if ! msprof --application="${application}" --output="${prof_dir}" > "${prof_dir}.log" 2>&1; then
+            echo "ERROR: msprof failed for ${name}, round ${r}; see ${prof_dir}.log" >&2
+            failed=1
+            times+=("N/A")
+            continue
+        fi
 
         t=$(find "${prof_dir}" -name "task_time_*.csv" -exec grep "AI_VECTOR_CORE" {} \; | head -1 | cut -d',' -f6)
-        if [ -z "$t" ]; then
+        if [[ ! "$t" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "ERROR: missing or invalid task time for ${name}, round ${r}" >&2
+            failed=1
             t="N/A"
         fi
         times+=("$t")
@@ -90,4 +111,8 @@ for entry in "${CASES[@]}"; do
 done
 
 echo "=========================================="
+if [ "$failed" -ne 0 ]; then
+    echo "ERROR: profiling incomplete. Raw data and logs in ${PROF_BASE}/" >&2
+    exit 1
+fi
 echo "Done. Raw data in ${PROF_BASE}/"
