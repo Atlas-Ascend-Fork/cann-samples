@@ -272,12 +272,13 @@ def parse_profile_metrics_from_csv(csv_path: Path) -> ProfileMetrics:
     with csv_path.open("r", encoding="utf-8-sig", newline="") as csv_file:
         reader = csv.DictReader(csv_file)
         header = reader.fieldnames
-        first_row = next(reader, None)
+        rows = [row for row in reader if row.get("Task Duration(us)")]
+        first_row = rows[1] if len(rows) > 1 else None
 
     if not header:
         raise ValueError(f"CSV header is missing in {csv_path}")
     if not first_row:
-        raise ValueError(f"CSV data row is missing in {csv_path}")
+        raise ValueError(f"CSV requires warmup and measured kernel rows in {csv_path}")
 
     metric_values = {
         field_name: parse_metric_value(first_row.get(column_name), column_name, csv_path)
