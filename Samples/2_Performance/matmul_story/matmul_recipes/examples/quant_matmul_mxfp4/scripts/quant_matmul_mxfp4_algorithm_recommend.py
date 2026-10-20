@@ -284,7 +284,7 @@ def cleanup_msprof_output_dir(msprof_output_dir: Path) -> None:
     # Recommendation only needs profiling artifacts transiently, so always
     # clean the output directory before returning control to the user.
     if msprof_output_dir.exists():
-        shutil.rmtree(msprof_output_dir, ignore_errors=True)
+        shutil.rmtree(msprof_output_dir)
 
 
 def list_prof_directories(msprof_output_dir: Path) -> set[Path]:

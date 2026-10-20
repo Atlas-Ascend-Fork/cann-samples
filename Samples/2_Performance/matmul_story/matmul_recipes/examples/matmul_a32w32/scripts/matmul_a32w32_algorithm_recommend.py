@@ -212,7 +212,7 @@ def generate_input(script_dir: Path, m: int, k: int, n: int, trans_a: bool, tran
 
 def cleanup_msprof_output_dir(msprof_output_dir: Path) -> None:
     if msprof_output_dir.exists():
-        shutil.rmtree(msprof_output_dir, ignore_errors=True)
+        shutil.rmtree(msprof_output_dir)
 
 
 def list_prof_directories(msprof_output_dir: Path) -> set[Path]:
