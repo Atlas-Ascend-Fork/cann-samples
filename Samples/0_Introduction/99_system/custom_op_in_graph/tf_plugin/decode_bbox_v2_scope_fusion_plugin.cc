@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include <cstring>
 #include "register/register.h"
 #include "graph/ascend_string.h"
 
@@ -37,8 +38,12 @@ namespace domi {
             SAMPLE_LOGE(op_name.GetString(), "Failed to get value from %s", op_name.GetString());
             return FAILED;
         }
-        uint8_t *data_addr = tensor.GetData();
-        value = *(reinterpret_cast<float *>(data_addr));
+        const uint8_t *data_addr = tensor.GetData();
+        if (data_addr == nullptr || tensor.GetSize() < sizeof(float) ||
+            tensor.GetTensorDesc().GetDataType() != ge::DT_FLOAT) {
+            return FAILED;
+        }
+        std::memcpy(&value, data_addr, sizeof(value));
         return SUCCESS;
     }
 
