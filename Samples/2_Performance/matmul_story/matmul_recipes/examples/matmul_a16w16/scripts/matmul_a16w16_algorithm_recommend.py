@@ -95,6 +95,15 @@ def parse_positive_uint64(arg: str, name: str) -> int:
     return value
 
 
+def parse_transpose_flag(value: str, name: str) -> bool:
+    normalized = value.lower()
+    if normalized in ("1", "true", "t"):
+        return True
+    if normalized in ("0", "false", "f"):
+        return False
+    raise ValueError(f"{name} must be one of: 0/1/true/false/t/f")
+
+
 def parse_arguments(argv: List[str]) -> Tuple[int, int, int, bool, bool, bool]:
     if len(argv) >= 2 and argv[1] in ("-h", "--help"):
         print_usage(Path(argv[0]).name)
@@ -118,8 +127,8 @@ def parse_arguments(argv: List[str]) -> Tuple[int, int, int, bool, bool, bool]:
     n = parse_positive_uint64(positional[2], "n")
 
     if len(positional) == 5:
-        trans_a = positional[3].lower() == "true"
-        trans_b = positional[4].lower() == "true"
+        trans_a = parse_transpose_flag(positional[3], "transA")
+        trans_b = parse_transpose_flag(positional[4], "transB")
     else:
         trans_a = False
         trans_b = True
