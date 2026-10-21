@@ -1,4 +1,5 @@
 build/
+build-sim/
 build_out/
 CLAUDE.md
 __pycache__/

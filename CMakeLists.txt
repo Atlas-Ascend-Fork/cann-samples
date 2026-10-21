@@ -18,6 +18,18 @@ if(NOT "${NPU_ARCH}" IN_LIST VALID_NPU_ARCHS)
     message(FATAL_ERROR "Unsupported NPU_ARCH: ${NPU_ARCH}. Supported values: dav-3510, dav-2201")
 endif()
 
+# ASC selects simulator libraries when project() initializes the language.
+# Keep this switch scoped to dav-2201; dav-3510 samples manage their own options.
+if(NPU_ARCH STREQUAL "dav-2201")
+    option(SIM "Build dav-2201 samples for msopprof simulator" OFF)
+    set(CMAKE_ASC_ARCHITECTURES "${NPU_ARCH}")
+    if(SIM)
+        set(CMAKE_ASC_RUN_MODE "sim")
+    else()
+        set(CMAKE_ASC_RUN_MODE "npu")
+    endif()
+endif()
+
 include(cmake/ascend.cmake)
 find_package(ASC)
 project(cann-samples LANGUAGES C CXX ASC)
