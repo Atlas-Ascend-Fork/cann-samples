@@ -4,15 +4,15 @@
 
 This sample demonstrates the basic process of running and verifying a kernel function on the NPU side using the <<<>>> kernel launch operator. The kernel function prints output results via printf.
 
+Debugging APIs such as `printf` are shared by the standard and C-style APIs.
+
 The host calls `aclInit(nullptr)` to initialize the Runtime before setting the device, creating the stream, and launching the kernel. After execution, it destroys the stream, resets the device, and calls `aclFinalize()`. These Runtime APIs are independent of whether the kernel uses C-style or C++-style APIs.
 
-## Supported Products and CANN Software Versions
+## Supported Products
 
-| Product | CANN Software Version |
-|---------|----------------------|
-| Ascend 950PR/Ascend 950DT | >= CANN 9.1.0 |
-| Atlas A3 Training Series Products/Atlas A3 Inference Series Products | >= CANN 9.0.0 |
-| Atlas A2 Training Series Products/Atlas A2 Inference Series Products | >= CANN 9.0.0 |
+- Ascend 950PR/Ascend 950DT
+- Atlas A3 Training Series Products/Atlas A3 Inference Series Products
+- Atlas A2 Training Series Products/Atlas A2 Inference Series Products
 
 ## Directory Structure
 
@@ -69,14 +69,14 @@ Execute the following steps in the root directory of this sample to build and ru
   The following execution results indicate successful execution.
 
   ```bash
-  [AIV Block 0/8] Hello World!!!
-  [AIV Block 1/8] Hello World!!!
-  [AIV Block 2/8] Hello World!!!
-  [AIV Block 3/8] Hello World!!!
-  [AIV Block 4/8] Hello World!!!
-  [AIV Block 5/8] Hello World!!!
-  [AIV Block 6/8] Hello World!!!
-  [AIV Block 7/8] Hello World!!!
+  [Block (0/8)]: Hello World!!!
+  [Block (1/8)]: Hello World!!!
+  [Block (2/8)]: Hello World!!!
+  [Block (3/8)]: Hello World!!!
+  [Block (4/8)]: Hello World!!!
+  [Block (5/8)]: Hello World!!!
+  [Block (6/8)]: Hello World!!!
+  [Block (7/8)]: Hello World!!!
   ```
 
-  The output consists of 8 lines, each corresponding to the print result of one AIV (AI Vector) Core. `[AIV Block X/8]` indicates the current core X (out of 8 cores total), showing that the kernel function has successfully executed on 8 AIV Cores.
+  The output contains one message for each of the 8 blocks, in any order. The example shows the message body; the toolchain may add a core-identifying prefix.

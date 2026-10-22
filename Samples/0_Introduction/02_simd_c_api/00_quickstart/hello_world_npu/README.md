@@ -4,6 +4,8 @@
 
 本样例通过使用<<<>>>内核调用符来完成算子核函数在NPU侧运行验证的基础流程，核函数内通过printf打印输出结果。
 
+`printf` 等调测接口不区分标准 API 和 C 风格 API。
+
 ## 支持的产品
 
 - Ascend 950PR/Ascend 950DT
@@ -41,9 +43,11 @@
 - 样例执行
   ```bash
   mkdir -p build && cd build;   # 创建并进入build目录
-  cmake ..;make -j;             # 编译工程
+  cmake -DCMAKE_ASC_ARCHITECTURES=dav-2201 ..;make -j;             # 编译工程
   ./demo                        # 执行样例
   ```
+  Ascend 950PR/950DT 请使用 `-DCMAKE_ASC_ARCHITECTURES=dav-3510`；Atlas A2/A3 使用 `dav-2201`。
+
   执行结果如下，说明执行成功。
   ```bash
   [Block (0/8)]: Hello World!!!
@@ -55,3 +59,5 @@
   [Block (6/8)]: Hello World!!!
   [Block (7/8)]: Hello World!!!
   ```
+
+  以上仅列出打印正文，工具链可能额外添加核标识前缀，Block 的打印顺序不固定。

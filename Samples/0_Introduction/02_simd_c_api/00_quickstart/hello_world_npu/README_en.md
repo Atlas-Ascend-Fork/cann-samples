@@ -4,6 +4,8 @@
 
 This sample demonstrates the basic process of verifying operator kernel function execution on the NPU side using the <<<>>> kernel call operator. The kernel function prints output results through printf.
 
+Debugging APIs such as `printf` are shared by the standard and C-style APIs.
+
 ## Supported Products
 
 - Ascend 950PR/Ascend 950DT
@@ -41,9 +43,11 @@ Execute the following steps in the root directory of this sample to compile and 
 - Sample execution
   ```bash
   mkdir -p build && cd build;   # Create and enter build directory
-  cmake ..;make -j;             # Build project
+  cmake -DCMAKE_ASC_ARCHITECTURES=dav-2201 ..;make -j;             # Build project
   ./demo                        # Execute sample
   ```
+  Use `-DCMAKE_ASC_ARCHITECTURES=dav-3510` for Ascend 950PR/950DT. Atlas A2/A3 uses `dav-2201`.
+
   The execution result is as follows, indicating successful execution.
   ```bash
   [Block (0/8)]: Hello World!!!
@@ -55,3 +59,5 @@ Execute the following steps in the root directory of this sample to compile and 
   [Block (6/8)]: Hello World!!!
   [Block (7/8)]: Hello World!!!
   ```
+
+  The example shows the message body. The toolchain may add a core-identifying prefix, and the block output order may vary.

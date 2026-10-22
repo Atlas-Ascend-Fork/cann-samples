@@ -4,15 +4,15 @@
 
 本样例通过使用<<<>>>内核调用符来完成样例核函数在NPU侧运行验证的基础流程，核函数内通过printf打印输出结果。
 
+`printf` 等调测接口不区分标准 API 和 C 风格 API。
+
 Host 侧先调用 `aclInit(nullptr)` 初始化 Runtime，再设置 Device、创建 Stream 并启动核函数；运行结束后销毁 Stream、重置 Device，最后调用 `aclFinalize()`。这两个 Runtime 接口与内核使用 C 风格还是 C++ 风格 API 无关。
 
-## 本样例支持的产品及CANN软件版本
+## 本样例支持的产品
 
-| 产品 | CANN软件版本 |
-|------|-------------|
-| Ascend 950PR/Ascend 950DT | >= CANN 9.1.0 |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 | >= CANN 9.0.0 |
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 | >= CANN 9.0.0 |
+- Ascend 950PR/Ascend 950DT
+- Atlas A3 训练系列产品/Atlas A3 推理系列产品
+- Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
 ## 目录结构介绍
 
@@ -66,14 +66,14 @@ Host 侧先调用 `aclInit(nullptr)` 初始化 Runtime，再设置 Device、创�
   执行结果如下，说明执行成功。
 
   ```bash
-  [AIV Block 0/8] Hello World!!!
-  [AIV Block 1/8] Hello World!!!
-  [AIV Block 2/8] Hello World!!!
-  [AIV Block 3/8] Hello World!!!
-  [AIV Block 4/8] Hello World!!!
-  [AIV Block 5/8] Hello World!!!
-  [AIV Block 6/8] Hello World!!!
-  [AIV Block 7/8] Hello World!!!
+  [Block (0/8)]: Hello World!!!
+  [Block (1/8)]: Hello World!!!
+  [Block (2/8)]: Hello World!!!
+  [Block (3/8)]: Hello World!!!
+  [Block (4/8)]: Hello World!!!
+  [Block (5/8)]: Hello World!!!
+  [Block (6/8)]: Hello World!!!
+  [Block (7/8)]: Hello World!!!
   ```
 
-  输出共 8 行，每行对应一个 AIV（AI Vector）Core 的打印结果。`[AIV Block X/8]` 表示当前为第 X 个核（共 8 个核），说明核函数已在 8 个 AIV Core 上成功执行。
+  输出包含 8 个 Block 各自的打印结果，顺序不固定。以上仅列出打印正文，工具链可能额外添加核标识前缀。
