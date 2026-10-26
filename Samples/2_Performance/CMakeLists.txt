@@ -10,6 +10,7 @@
 # ----------------------------------------------------------------------------
 
 add_subdirectory(matmul_story)
+add_subdirectory(matmul_leakyrelu_fusion_story)
 add_subdirectory(grouped_matmul_story)
 add_subdirectory(rms_norm_quant_story)
 add_subdirectory(full_quant_fused_infer_attention_score_story)
