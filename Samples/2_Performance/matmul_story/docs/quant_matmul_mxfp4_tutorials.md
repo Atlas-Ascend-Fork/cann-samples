@@ -1,6 +1,6 @@
 # MXFP4 量化矩阵乘教程：流水分析与分步优化
 
-> **本文档**整理各 Step 的 **问题背景、优化思路与流水对照**；**编译、安装与运行** 请见 [`matmul_tutorials/README.md`](../matmul_tutorials/README.md)。
+> **本文档**整理各 Step 的 **问题背景、优化思路与流水对照**；**编译、安装与运行** 请见 [`matmul_tutorials/README.md`](../matmul_tutorials/arch35/README.md)。
 
 ## 摘要
 
@@ -117,7 +117,7 @@ Step 0 实现一个基础的mxfp4的matmul调用Demo，承担 **基准** 角色�
 
 ### 0.5 代码索引比对
 
-- **样例根目录**：[0_naive](../matmul_tutorials/0_naive/)
+- **样例根目录**：[0_naive](../matmul_tutorials/arch35/0_naive/)
 
 ---
 
@@ -156,7 +156,7 @@ Step 0 实现一个基础的mxfp4的matmul调用Demo，承担 **基准** 角色�
 
 ### 1.5 代码索引比对
 
-- **样例根目录**：[1_pingpong/](../matmul_tutorials/1_pingpong/)
+- **样例根目录**：[1_pingpong/](../matmul_tutorials/arch35/1_pingpong/)
 
 ---
 
@@ -189,7 +189,7 @@ Step 0 实现一个基础的mxfp4的matmul调用Demo，承担 **基准** 角色�
 
 ### 2.5 代码索引比对
 
-- **样例根目录**：[2_block_swat](../matmul_tutorials/2_block_swat/)
+- **样例根目录**：[2_block_swat](../matmul_tutorials/arch35/2_block_swat/)
 
 ---
 
@@ -227,7 +227,7 @@ Step 0 实现一个基础的mxfp4的matmul调用Demo，承担 **基准** 角色�
 
 ### 3.5 代码索引比对
 
-- **样例根目录**：[3_last_round_tile_balance](../matmul_tutorials/3_last_round_tile_balance/)
+- **样例根目录**：[3_last_round_tile_balance](../matmul_tutorials/arch35/3_last_round_tile_balance/)
 
 ---
 
@@ -257,7 +257,7 @@ Step 0 实现一个基础的mxfp4的matmul调用Demo，承担 **基准** 角色�
 
 ### 4.4 代码索引比对
 
-- **样例根目录**：[4_unit_flag](../matmul_tutorials/4_unit_flag/)
+- **样例根目录**：[4_unit_flag](../matmul_tutorials/arch35/4_unit_flag/)
 
 ---
 
@@ -297,7 +297,7 @@ L1上存在2个bank，前面一半是和后一半分别是2个bank。如果写�
 
 ### 5.5 代码目录
 
-- **样例根目录**：[5_halfl1_ping_halfl1_pong](../matmul_tutorials/5_halfl1_ping_halfl1_pong/)
+- **样例根目录**：[5_halfl1_ping_halfl1_pong](../matmul_tutorials/arch35/5_halfl1_ping_halfl1_pong/)
 
 <a id="tutorial-step-6"></a>
 
@@ -398,7 +398,7 @@ $$
 
 ### 6.5 代码目录
 
-- **样例根目录**：[6_scale_memory_access_coalescing](../matmul_tutorials/6_scale_memory_access_coalescing/)
+- **样例根目录**：[6_scale_memory_access_coalescing](../matmul_tutorials/arch35/6_scale_memory_access_coalescing/)
 
 
 <a id="tutorial-step-7"></a>
@@ -580,7 +580,7 @@ $$
 
 ### 7.5 代码目录
 
-- **样例根目录**：[7_fullload](../matmul_tutorials/7_fullload/)
+- **样例根目录**：[7_fullload](../matmul_tutorials/arch35/7_fullload/)
 
 ---
 

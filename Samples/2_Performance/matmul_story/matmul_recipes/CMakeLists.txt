@@ -9,6 +9,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
+cann_sample_check_arch(dav-3510)
+
 function(add_matmul_recipe target_name source variant)
     add_executable(${target_name} ${CMAKE_CURRENT_SOURCE_DIR}/examples/${source})
     target_include_directories(${target_name} PRIVATE

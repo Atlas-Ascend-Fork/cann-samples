@@ -28,7 +28,7 @@ if [[ -z "$REPO_ROOT" ]]; then
     echo "ERROR: cannot locate repo root containing .ci/build.sh"
     exit 1
 fi
-INSTALL_DIR="${REPO_ROOT}/build_out/2_Performance/matmul_story/matmul_tutorials"
+INSTALL_DIR="${REPO_ROOT}/build_out/2_Performance/matmul_story/matmul_tutorials/arch35"
 DEFAULT_TUTORIAL_TARGET="matmul_tutorial_mxfp4_base"
 
 TARGET=""

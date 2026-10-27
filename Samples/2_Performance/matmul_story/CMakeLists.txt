@@ -9,8 +9,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-cann_sample_check_arch(dav-3510)
-
 set(MATMUL_STORY_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(MATMUL_INSTALL_PREFIX "2_Performance/matmul_story")
 

@@ -23,5 +23,5 @@ target_link_libraries(matmul_tutorial_mxfp4_memery_access_coalescing PRIVATE
     cann_samples::tensor_api
 )
 install(TARGETS matmul_tutorial_mxfp4_memery_access_coalescing
-    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
+    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials/arch35
 )

@@ -9,19 +9,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_executable(matmul_tutorial_mxfp4_swat_unitflag matmul_tutorial_mxfp4_swat_unitflag.asc)
-target_include_directories(matmul_tutorial_mxfp4_swat_unitflag PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-target_compile_options(matmul_tutorial_mxfp4_swat_unitflag PRIVATE ${MATMUL_ASCENDC_COMPILE_OPTS})
-target_link_libraries(matmul_tutorial_mxfp4_swat_unitflag PRIVATE
-    m
-    dl
-    platform
-    tiling_api
-    cann_samples::tensor_api
-)
-install(TARGETS matmul_tutorial_mxfp4_swat_unitflag
-    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
-)
+# v3 蛇形窗口喂数调度：789 µs / 174.1 TFLOPS（与 v2 持平）
+add_executable(step3_matmul_snake_schedule step3_matmul_snake_schedule.asc)
+target_compile_options(step3_matmul_snake_schedule PRIVATE ${MATMUL_TUTORIAL_ASCENDC_COMPILE_OPTS})
+target_link_libraries(step3_matmul_snake_schedule PRIVATE m dl platform tiling_api register)
+install(TARGETS step3_matmul_snake_schedule RUNTIME DESTINATION ${MATMUL_TUTORIAL_INSTALL_PREFIX})

@@ -9,19 +9,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_executable(matmul_tutorial_mxfp4_swat_balance matmul_tutorial_mxfp4_swat_balance.asc)
-target_include_directories(matmul_tutorial_mxfp4_swat_balance PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-target_compile_options(matmul_tutorial_mxfp4_swat_balance PRIVATE ${MATMUL_ASCENDC_COMPILE_OPTS})
-target_link_libraries(matmul_tutorial_mxfp4_swat_balance PRIVATE
-    m
-    dl
-    platform
-    tiling_api
-    cann_samples::tensor_api
-)
-install(TARGETS matmul_tutorial_mxfp4_swat_balance
-    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
-)
+# v2 换 Cube + 多核（高级 API）：785~793 µs / ~174 TFLOPS
+add_executable(step2_matmul_cube_multicore step2_matmul_cube_multicore.asc)
+target_compile_options(step2_matmul_cube_multicore PRIVATE ${MATMUL_TUTORIAL_ASCENDC_COMPILE_OPTS})
+target_link_libraries(step2_matmul_cube_multicore PRIVATE m dl platform tiling_api register)
+install(TARGETS step2_matmul_cube_multicore RUNTIME DESTINATION ${MATMUL_TUTORIAL_INSTALL_PREFIX})

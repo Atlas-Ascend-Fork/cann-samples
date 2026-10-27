@@ -9,19 +9,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_executable(matmul_tutorial_mxfp4_pingpong matmul_tutorial_mxfp4_pingpong.asc)
-target_include_directories(matmul_tutorial_mxfp4_pingpong PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-target_compile_options(matmul_tutorial_mxfp4_pingpong PRIVATE ${MATMUL_ASCENDC_COMPILE_OPTS})
-target_link_libraries(matmul_tutorial_mxfp4_pingpong PRIVATE
-    m
-    dl
-    platform
-    tiling_api
-    cann_samples::tensor_api
-)
-install(TARGETS matmul_tutorial_mxfp4_pingpong
-    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
-)
+# v7 = v6 任意 shape 泛化（M/N/K 为 16 倍数）：4096³ 回归 616.6 µs / 222.9 TFLOPS
+add_executable(step7_matmul_general_shape step7_matmul_general_shape.asc)
+target_compile_options(step7_matmul_general_shape PRIVATE ${MATMUL_TUTORIAL_ASCENDC_COMPILE_OPTS})
+target_link_libraries(step7_matmul_general_shape PRIVATE m dl platform)
+install(TARGETS step7_matmul_general_shape RUNTIME DESTINATION ${MATMUL_TUTORIAL_INSTALL_PREFIX})

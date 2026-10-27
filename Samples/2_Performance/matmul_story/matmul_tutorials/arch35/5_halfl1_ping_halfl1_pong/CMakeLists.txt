@@ -9,19 +9,19 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_executable(matmul_tutorial_mxfp4_a_fullload matmul_tutorial_mxfp4_a_fullload.asc)
-target_include_directories(matmul_tutorial_mxfp4_a_fullload PRIVATE
+add_executable(matmul_tutorial_mxfp4_half1l1_ping_halfl1_pong matmul_tutorial_mxfp4_half1l1_ping_halfl1_pong.asc)
+target_include_directories(matmul_tutorial_mxfp4_half1l1_ping_halfl1_pong PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../common
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
-target_compile_options(matmul_tutorial_mxfp4_a_fullload PRIVATE ${MATMUL_ASCENDC_COMPILE_OPTS})
-target_link_libraries(matmul_tutorial_mxfp4_a_fullload PRIVATE
+target_compile_options(matmul_tutorial_mxfp4_half1l1_ping_halfl1_pong PRIVATE ${MATMUL_ASCENDC_COMPILE_OPTS})
+target_link_libraries(matmul_tutorial_mxfp4_half1l1_ping_halfl1_pong PRIVATE
     m
     dl
     platform
     tiling_api
     cann_samples::tensor_api
 )
-install(TARGETS matmul_tutorial_mxfp4_a_fullload
-    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
+install(TARGETS matmul_tutorial_mxfp4_half1l1_ping_halfl1_pong
+    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials/arch35
 )

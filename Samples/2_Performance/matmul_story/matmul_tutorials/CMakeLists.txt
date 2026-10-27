@@ -9,18 +9,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_subdirectory(0_naive)
-add_subdirectory(1_pingpong)
-add_subdirectory(2_block_swat)
-add_subdirectory(3_last_round_tile_balance)
-add_subdirectory(4_unit_flag)
-add_subdirectory(5_halfl1_ping_halfl1_pong)
-add_subdirectory(6_scale_memory_access_coalescing)
-add_subdirectory(7_fullload)
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts/
-    DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
-    FILES_MATCHING
-    PATTERN "*.py"
-    PATTERN "*.sh"
-)
+add_subdirectory(arch35)
+add_subdirectory(arch22)

@@ -18,7 +18,7 @@ matmul_story/
 │       ├── quant_matmul_hifp8/                 # HiFloat8 量化矩阵乘示例
 │       ├── matmul_a16w16/                      # A16W16 非量化矩阵乘示例
 │       └── weight_quant_matmul_mxfp8fp4/       # MXFP8FP4 量化矩阵乘示例
-└── matmul_tutorials/                           # 分步教程（细目见 matmul_tutorials/README.md）
+└── matmul_tutorials/                           # 分步教程（按架构组织：arch35/ = dav-3510、arch22/ = dav-2201；细目见 matmul_tutorials/README.md）
     ├── CMakeLists.txt
     ├── README.md
     ├── common/                                 # 教程共享工具函数与 tile 头文件
@@ -58,4 +58,4 @@ matmul_story/
 
 ## 分步教程
 
-各 Step 说明、Case 与流水图见 [matmul_tutorials/README.md](./matmul_tutorials/README.md)；目录树见上文 `matmul_tutorials/`。
+各 Step 说明、Case 与流水图见 [matmul_tutorials/README.md](./matmul_tutorials/README.md)（arch35 = dav-3510 MXFP4 教程；arch22 = dav-2201 纯 MatMul 六轮迭代教学）；目录树见上文 `matmul_tutorials/`。

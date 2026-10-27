@@ -9,19 +9,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-add_executable(matmul_tutorial_mxfp4_swat matmul_tutorial_mxfp4_swat.asc)
-target_include_directories(matmul_tutorial_mxfp4_swat PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-target_compile_options(matmul_tutorial_mxfp4_swat PRIVATE ${MATMUL_ASCENDC_COMPILE_OPTS})
-target_link_libraries(matmul_tutorial_mxfp4_swat PRIVATE
-    m
-    dl
-    platform
-    tiling_api
-    cann_samples::tensor_api
-)
-install(TARGETS matmul_tutorial_mxfp4_swat
-    RUNTIME DESTINATION ${MATMUL_INSTALL_PREFIX}/matmul_tutorials
-)
+# v6 = v5 + L1 四级缓冲 + 错位分核（最优）：610~637 µs / 215.8~225.4 TFLOPS
+add_executable(step6_matmul_lowlevel_4buf_stagger step6_matmul_lowlevel_4buf_stagger.asc)
+target_compile_options(step6_matmul_lowlevel_4buf_stagger PRIVATE ${MATMUL_TUTORIAL_ASCENDC_COMPILE_OPTS})
+target_link_libraries(step6_matmul_lowlevel_4buf_stagger PRIVATE m dl platform)
+install(TARGETS step6_matmul_lowlevel_4buf_stagger RUNTIME DESTINATION ${MATMUL_TUTORIAL_INSTALL_PREFIX})

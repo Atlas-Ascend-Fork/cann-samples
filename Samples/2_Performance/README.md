@@ -6,7 +6,7 @@
 分组矩阵乘性能优化专题，覆盖 grouped matmul 的 tiling、数据搬运与 kernel 实现，并提供 MXFP4/MXFP8 可运行示例及数据校验流程。
 
 ### [matmul_story](./matmul_story)
-矩阵乘性能优化专题，覆盖 MatMul 与量化 MatMul（如 MXFP4）两类实践，包含性能分析文档、分步教程（baseline→SWAT→尾轮负载均衡→UnitFlag）以及可运行的 recipe 示例（A16W16、quant_matmul_mxfp4）。
+矩阵乘性能优化专题，覆盖 MatMul 与量化 MatMul（如 MXFP4）两类实践，包含性能分析文档、可运行的 recipe 示例（A16W16、quant_matmul_mxfp4），以及按架构组织的分步教程 matmul_tutorials：arch35（dav-3510，MXFP4：baseline→SWAT→尾轮负载均衡→UnitFlag）与 arch22（dav-2201，纯 MatMul ：单核向量→Cube 多核→蛇形窗口→错位分核→低阶逐 tile 流水→4buf+错位）。
 
 ### [rms_norm_quant_story](./rms_norm_quant_story)
 以 Ascend 950PR/950DT 训练/推理系列产品为例，介绍 RmsNormQuant 算子的完整性能优化实践。包括多核并行与数据预加载、内存带宽优化、核内流水线排布、硬件特性适配等优化策略，从理论分析到代码实践的端到端调优指南。
