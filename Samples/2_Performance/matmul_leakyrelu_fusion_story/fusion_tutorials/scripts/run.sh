@@ -48,8 +48,8 @@ points vs double-precision CPU golden); the program prints [PASS] and ms/iter.
 Positional arguments:
   m k n   Matrix dims (m: rows of A; k: cols of A / rows of B; n: cols of B),
           multiples of 16, with k and n <= 65535 (Nd2NzParams.srcDValue is
-          uint16_t on dav-2201). Only accepted by Step 9/9s
-          (general-shape versions); all other steps are fixed at 4096x4096x4096.
+          uint16_t on dav-2201). Only accepted by Step 9
+          (general-shape version); all other steps are fixed at 4096x4096x4096.
 
 Options:
   --target <name>    Tutorial executable to run.
@@ -62,20 +62,18 @@ Available tutorial executables:
   step02_matmul_cube_fused_mix                (Step 2: 高级 API mix 融合, 反例)
   step03_matmul_fused_2d                      (Step 3: 融合二维切分)
   step04_matmul_decoupled_mix                 (Step 4: 解耦融合 SyncAll)
-  step05_matmul_snake_split                   (Step 5: 蛇形窗口调度拆分)
-  step06_matmul_lowlevel_split                (Step 6: 低阶 API 拆分)
-  step06b_matmul_lowlevel_split_4buf_aswt     (Step 6b: step06 + L1 四级缓冲 + ASWT)
-  step07_matmul_leakyrelu_fused_lowlevel      (Step 7: 低阶 mix 逐 tile 流水融合)
-  step08_matmul_leakyrelu_fused_lowlevel_aswt (Step 8: step07 + L1 四级缓冲 + ASWT, 当前最优)
+  step05_matmul_snake_mix                     (Step 5: 蛇形窗口调度解耦融合)
+  step06_matmul_decoupled_lowlevel_aswt       (Step 6: 低阶 API 解耦融合 SyncAll + ASWT)
+  step07_matmul_leakyrelu_fused_lowlevel      (Step 7: 低阶 mix 逐 tile 流水融合 + ASWT + 4buf)
+  step08_matmul_leakyrelu_fused_lowlevel_aswt (Step 8: step07 + L1 双 Bank 分组, 当前最优)
   step09_matmul_leakyrelu_fused_general       (Step 9: step08 任意 shape 泛化, m k n)
-  step09s_matmul_lowlevel_split_general       (Step 9s: step09 的拆分对照, m k n)
 
 Examples:
   # 构建并运行默认 Step 1（4096^3，注意需数十秒）
   bash scripts/run.sh
 
   # 指定 Step 运行
-  bash scripts/run.sh --target step05_matmul_snake_split
+  bash scripts/run.sh --target step05_matmul_snake_mix
 
   # 泛化版指定 shape（m k n）
   bash scripts/run.sh --target step09_matmul_leakyrelu_fused_general 4160 4080 4048
@@ -91,13 +89,11 @@ KNOWN_TARGETS=(
     step02_matmul_cube_fused_mix
     step03_matmul_fused_2d
     step04_matmul_decoupled_mix
-    step05_matmul_snake_split
-    step06_matmul_lowlevel_split
-    step06b_matmul_lowlevel_split_4buf_aswt
+    step05_matmul_snake_mix
+    step06_matmul_decoupled_lowlevel_aswt
     step07_matmul_leakyrelu_fused_lowlevel
     step08_matmul_leakyrelu_fused_lowlevel_aswt
     step09_matmul_leakyrelu_fused_general
-    step09s_matmul_lowlevel_split_general
 )
 
 is_known_target() {
@@ -139,7 +135,7 @@ if ! is_known_target "$TARGET"; then
     exit 1
 fi
 if [[ -n "$M" && "$TARGET" != step09* ]]; then
-    echo "ERROR: m k n 仅 Step 9/9s（泛化版）接受；$TARGET 固定 4096x4096x4096"
+    echo "ERROR: m k n 仅 Step 9（泛化版）接受；$TARGET 固定 4096x4096x4096"
     exit 1
 fi
 

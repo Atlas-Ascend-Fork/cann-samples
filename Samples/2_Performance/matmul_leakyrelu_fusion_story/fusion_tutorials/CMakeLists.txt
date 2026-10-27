@@ -31,16 +31,13 @@ add_fusion_tutorial(step03_matmul_fused_2d
 add_fusion_tutorial(step04_matmul_decoupled_mix
     step04_decoupled_mix/step04_matmul_decoupled_mix.asc
     LIBS m dl platform tiling_api register)
-add_fusion_tutorial(step05_matmul_snake_split
-    step05_snake_split/step05_matmul_snake_split.asc
+add_fusion_tutorial(step05_matmul_snake_mix
+    step05_snake_mix/step05_matmul_snake_mix.asc
     LIBS m dl platform tiling_api register)
 
 # 低阶 API（Nd2Nz / LoadData / Mmad / Fixpipe 手工流水）
-add_fusion_tutorial(step06_matmul_lowlevel_split
-    step06_lowlevel_split/step06_matmul_lowlevel_split.asc
-    LIBS m dl platform)
-add_fusion_tutorial(step06b_matmul_lowlevel_split_4buf_aswt
-    step06_lowlevel_split/step06b_matmul_lowlevel_split_4buf_aswt.asc
+add_fusion_tutorial(step06_matmul_decoupled_lowlevel_aswt
+    step06_decoupled_lowlevel/step06_matmul_decoupled_lowlevel_aswt.asc
     LIBS m dl platform)
 add_fusion_tutorial(step07_matmul_leakyrelu_fused_lowlevel
     step07_fused_lowlevel/step07_matmul_leakyrelu_fused_lowlevel.asc
@@ -51,9 +48,6 @@ add_fusion_tutorial(step08_matmul_leakyrelu_fused_lowlevel_aswt
 
 add_fusion_tutorial(step09_matmul_leakyrelu_fused_general
     step09_general/step09_matmul_leakyrelu_fused_general.asc
-    LIBS m dl platform)
-add_fusion_tutorial(step09s_matmul_lowlevel_split_general
-    step09_general/step09s_matmul_lowlevel_split_general.asc
     LIBS m dl platform)
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.md

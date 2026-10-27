@@ -2,22 +2,22 @@
 
 ## 概述
 
-本目录提供 MatMul+LeakyReLU 从单核向量初始版到高性能低阶融合实现的分步教程，共 11 个可执行文件。
-整体脉络（4096×4096×4096）：单核向量 6214 ms → 低阶 mix 融合 + L1 四级缓冲 + ASWT 窗口调度 0.81 ms。
+本目录提供 MatMul+LeakyReLU 从单核向量初始版到高性能低阶融合实现的分步教程，共 9 个可执行文件。
+整体脉络（4096×4096×4096）：单核向量 6214 ms → 低阶 mix 融合 + L1 四级缓冲 + ASWT 窗口调度 + L1 双 Bank 分组 1.38 ms。
 融合收益与实现层级相关：高级 API 朴素融合反而更慢（910B 上 mix 模式 C→VECIN 经 GM 中转，
-见 Step 2 反例）；低阶 API 自管流水下融合较同配置拆分快约 20%，
-LeakyReLU 耗时被重叠进 cube 计算。小 shape 下握手与 launch 开销占比升高，拆分更优
-（Step 9/9s 实测小 shape 拆分快约 10~17%）。
+见 Step 2 反例）；低阶 API 自管流水下融合较同配置拆分更快，
+LeakyReLU 耗时被重叠进 cube 计算。小 shape 下握手与 launch 开销占比升高，
+融合收益收窄，拆分实现可能更优。
 
-Step 1~8 硬编码 M=N=K=4096；Step 9/9s（泛化版）支持运行时传入 `m k n`（矩阵维度，
+Step 1~8 硬编码 M=N=K=4096；Step 9（泛化版）支持运行时传入 `m k n`（矩阵维度，
 A[m,k] x B[k,n]），无参运行时执行内置 shape 列表（含大/小/非对齐组合及 `k`/`n` 取 65520 的
 跨度边界用例）。参数约束（16 的正整数倍、`k`/`n` 跨度上限等）以 `bash scripts/run.sh --help`
 输出为准。
 
 每个 Step 的 `.asc` 内嵌数据生成与精度校验（1024 个随机点对比 double 精度 CPU golden，
 输出 `[PASS]`），并打印 `ms/iter` 耗时。
-host 侧公共函数（fp16 位转换、随机数据填充、golden 抽检、计时）与多 AIV LeakyReLU kernel
-抽取于 `common/` 目录，各 Step 的 `.asc` 仅保留该步的优化点本体。
+host 侧公共函数（fp16 位转换、随机数据填充、golden 抽检、计时）抽取于 `common/` 目录，
+各 Step 的 `.asc` 仅保留该步的优化点本体。
 
 ## Step 列表
 
@@ -27,13 +27,11 @@ host 侧公共函数（fp16 位转换、随机数据填充、golden 抽检、计
 | `step02_cube_fused_mix/step02_matmul_cube_fused_mix.asc` | 高级 API mix 融合，因 C→VECIN 经 GM 中转反而更慢（反例） | 1.826 ms |
 | `step03_fused_2d/step03_matmul_fused_2d.asc` | 融合 + 二维切分（SetSingleShape 8×4），降低 B 矩阵重复搬运 | 1.524 ms |
 | `step04_decoupled_mix/step04_matmul_decoupled_mix.asc` | 解耦融合：cube 写 GM → SyncAll → AIV 读回做 LeakyReLU | 1.411 ms |
-| `step05_snake_split/step05_matmul_snake_split.asc` | 高级 API 蛇形窗口调度拆分，通过改善 L2 局部性提升有效带宽 | 1.208 ms |
-| `step06_lowlevel_split/step06_matmul_lowlevel_split.asc` | 低阶 API（Nd2Nz/LoadData/Mmad/Fixpipe）手工流水拆分 | 1.227 ms |
-| `step06_lowlevel_split/step06b_matmul_lowlevel_split_4buf_aswt.asc` | Step 6 + L1 四级缓冲 + ASWT 4×4 窗口蛇形 | 0.998 ms |
-| `step07_fused_lowlevel/step07_matmul_leakyrelu_fused_lowlevel.asc` | 低阶 mix 融合：fixpipe 落 GM 即通知配对 AIV 做 LeakyReLU | 1.005 ms |
-| `step08_fused_lowlevel_aswt/step08_matmul_leakyrelu_fused_lowlevel_aswt.asc` | Step 7 + L1 四级缓冲 + ASWT 窗口蛇形，**当前最优** | **0.81 ms** |
-| `step09_general/step09_matmul_leakyrelu_fused_general.asc` | Step 8 的任意 shape 泛化（运行时传入 `m k n`，约束见 `run.sh --help`） | 4096³ 回归无损 |
-| `step09_general/step09s_matmul_lowlevel_split_general.asc` | Step 9 的拆分对照版（同样支持任意 shape 与命令行 `m k n`） | 拆分对照 |
+| `step05_snake_mix/step05_matmul_snake_mix.asc` | 高级 API 蛇形窗口调度 + 解耦融合（单 kernel，SyncAll 衔接 epilogue），改善 L2 局部性 | 1.551 ms（910B4 实测，原拆分实现 1.640 ms） |
+| `step06_decoupled_lowlevel/step06_matmul_decoupled_lowlevel_aswt.asc` | 低阶 API 解耦融合（SyncAll 两阶段，单 kernel）：AIC 手工流水 + ASWT 4×4 窗口蛇形，AIV 原地 LeakyReLU（L1 四级缓冲） | 1.48 ms（910B4 实测；双缓冲版 1.66 ms） |
+| `step07_fused_lowlevel/step07_matmul_leakyrelu_fused_lowlevel.asc` | 低阶 mix 逐 tile 流水融合 + ASWT 4×4 窗口蛇形 + L1 四级缓冲：fixpipe 落 GM 即通知配对 AIV 做 LeakyReLU | 1.43 ms（910B4 实测；双缓冲版 1.604 ms） |
+| `step08_fused_lowlevel_aswt/step08_matmul_leakyrelu_fused_lowlevel_aswt.asc` | Step 7 + L1 双 Bank 分组（4 级缓冲按奇偶分 Bank，读写恒异 Bank，参照 `1_Features/memory_optimization/l1_bank_conflict` 样例），**当前最优** | **1.38 ms（910B4 实测；Bank 优化前 1.43 ms）** |
+| `step09_general/step09_matmul_leakyrelu_fused_general.asc` | Step 8（含 L1 双 Bank 分组）的任意 shape 泛化（运行时传入 `m k n`，约束见 `run.sh --help`） | 4096³ 回归 1.38 ms（910B4 实测，与 Step 8 持平；Bank 优化前 1.46 ms） |
 
 注：Step 1 为 fp32 输入的单核向量基线；Step 2 起均为 fp16 输入、fp32 累加输出。
 跨阶段耗时对比包含输入精度变化，不构成同精度条件下的纯实现优化对比。
@@ -74,8 +72,8 @@ bash scripts/run.sh --help
 ## 验证与验收标准
 
 - **单步验证**：可执行文件退出码为 0，且首次精度检查与计时后复检（post-timing spot-check）均输出 `[PASS]`。
-- **全量回归**：11 个可执行文件全部通过单步验证；其中 Step 9/9s 需无参运行，覆盖内置 shape 列表（大/小/非对齐组合及跨度边界用例共 10 组）。
-- **性能复现**：耗时数据与设备型号、CANN 版本强相关。本文耗时在 Ascend 910B4、CANN 9.2.0-beta.2 上实测；计时口径为 warmup 后连续迭代取平均（各 Step 的 warmup/iters 见源码），融合收益以同 Step 的拆分对照版本为准。判定性能结论时应在相同环境下实测对比，而非与本文数值做绝对一致比较。
+- **全量回归**：9 个可执行文件全部通过单步验证；其中 Step 9 需无参运行，覆盖内置 shape 列表（大/小/非对齐组合及跨度边界用例共 10 组）。
+- **性能复现**：耗时数据与设备型号、CANN 版本强相关。本文耗时在 Ascend 910B4、CANN 9.2.0-beta.2 上实测；计时口径为 warmup 后连续迭代取平均（各 Step 的 warmup/iters 见源码），融合收益以 Step 表内注释的同配置拆分实现实测耗时为准。判定性能结论时应在相同环境下实测对比，而非与本文数值做绝对一致比较。
 
 ## 手动构建与运行
 
