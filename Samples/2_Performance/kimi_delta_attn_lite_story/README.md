@@ -832,7 +832,7 @@ NRMSE = RMS(NPU_FP32 - Golden_FP32) / (RMS(Golden_FP32) + 1e-8)
 
 O 和 `final_state` 分别要求 `NRMSE < 0.006`；NaN 或 Inf 直接判为失败。
 
-该判据与 [FLA 的 FlashKDA 单测](https://github.com/fla-org/flash-linear-attention/blob/main/tests/ops/test_kda.py) 一致，计算式对应 [FLA `assert_close`](https://github.com/fla-org/flash-linear-attention/blob/main/fla/utils/_testing.py) 中的 `RMSE(error) / (RMS(reference) + 1e-8)`。MoonshotAI 的 [FlashKDA 对比测试](https://github.com/MoonshotAI/FlashKDA/blob/master/tests/test_fwd.py) 也采用相同指标，并按场景使用 0.005～0.006 的阈值。
+该判据与 [FLA 的 FlashKDA 单测](https://github.com/fla-org/flash-linear-attention/blob/main/tests/ops/test_kda.py) 一致，计算式对应 [FLA `assert_close`](https://github.com/fla-org/flash-linear-attention/blob/main/fla/utils/testing.py) 中的 `RMSE(error) / (RMS(reference) + 1e-8)`。MoonshotAI 的 [FlashKDA 对比测试](https://github.com/MoonshotAI/FlashKDA/blob/master/tests/test_fwd.py) 也采用相同指标，并按场景使用 0.005～0.006 的阈值。
 
 `golden_o.bin` 与 `golden_final_state.bin` 直接保存未量化的 FP32 Recurrent Golden。NPU 输出文件保持接口的 BF16 dtype，验证脚本读入后将其转为 FP32，再与 Golden 计算 NRMSE。
 
