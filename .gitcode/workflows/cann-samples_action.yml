@@ -52,6 +52,9 @@ stages:
         container:
           image: swr.cn-north-4.myhuaweicloud.com/ci_cann/ubuntu20.04.05_x86:k8s_v1.1006
       JOB_pre:
+        permissions:
+          repository: read
+          id-token: write
         name: Test_PreBuild
         uses: cann/.gitcode/.gitcode/workflows/pre_action.yml@master
     pre:
@@ -61,6 +64,9 @@ stages:
     name: Compile
     jobs:
       JOB_x86_compile:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_x86
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -69,6 +75,9 @@ stages:
           arch: 'x64'
           package_name: 'cann-samples_linux-x86_64.zip'
       JOB_x86_compile_910c:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_x86_910c
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -77,6 +86,9 @@ stages:
           arch: 'x64'
           package_name: 'cann-samples_910c_linux-x86_64.zip'
       JOB_x86_compile_950:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_x86_950
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -85,6 +97,9 @@ stages:
           arch: 'x64'
           package_name: 'cann-samples_950_linux-x86_64.zip'
       JOB_arm_compile:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_arm
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -93,6 +108,9 @@ stages:
           arch: 'arm64'
           package_name: 'cann-samples_linux-aarch64.zip'
       JOB_arm_compile_910c:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_arm_910c
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -101,6 +119,9 @@ stages:
           arch: 'arm64'
           package_name: 'cann-samples_910c_linux-aarch64.zip'
       JOB_arm_compile_950:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_arm_950
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -109,12 +130,18 @@ stages:
           arch: 'arm64'
           package_name: 'cann-samples_950_linux-aarch64.zip'
       JOB_codecheck:
+        permissions:
+          repository: read
+          id-token: write
         name: CodeCheck
         uses: cann/.gitcode/.gitcode/workflows/codecheck_action.yml@master
         with:
           precommit_image_version: ${{ jobs.JOB_image.outputs.precommit }}
           codecheck_image_version: ${{ jobs.JOB_image.outputs.codecheck }}
       JOB_staticcheck_md_check:
+        permissions:
+          repository: read
+          id-token: write
         name: staticcheck_md_check
         uses: .gitcode/workflows/staticcheck_action.yml
         with:
